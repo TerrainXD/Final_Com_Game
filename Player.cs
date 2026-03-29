@@ -11,14 +11,23 @@ public class Player
 
     private float speed = 5f;
     private float gravity = 0.5f; // ตัวละครต้องมีผลจากแรงโน้มถ่วง 
-    private float jumpForce = -10f;
+    private float jumpForce = -12f;
     private bool isGrounded;
     private Texture2D texture;
+
+    public Vector2 SpawnPoint;
 
     public Player(Vector2 startPos, Texture2D tex)
     {
         Position = startPos;
         texture = tex;
+        SpawnPoint = startPos;
+    }
+
+    public void Die()
+    {
+        Position = SpawnPoint;
+        Velocity = Vector2.Zero;
     }
 
     public void Update(List<Platform> platforms)
@@ -75,6 +84,18 @@ public class Player
                     }
                     Velocity.Y = 0; // หยุดความเร็วแกน Y เมื่อชน
                 }
+            }
+        }
+    }
+
+    public void CheckSpikeCollision(List<Spike> spikes)
+    {
+        foreach (var spike in spikes)
+        {
+            if (spike.IsDangerous && Hitbox.Intersects(spike.Hitbox))
+            {
+                Die();
+                break;
             }
         }
     }

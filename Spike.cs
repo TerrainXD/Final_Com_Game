@@ -1,21 +1,15 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-public enum TimeState
-{
-    Permanent,
-    Present,
-    Past
-}
 
-public class Platform
+public class Spike
 {
     public Rectangle Hitbox;
     public TimeState ActiveTime;
-    public bool IsSolid;
+    public bool IsDangerous;
     private Texture2D texture;
 
-    public Platform(Rectangle hitbox, TimeState activeTime, Texture2D tex)
+    public Spike(Rectangle hitbox, TimeState activeTime, Texture2D tex)
     {
         Hitbox = hitbox;
         ActiveTime = activeTime;
@@ -26,23 +20,23 @@ public class Platform
     {
         if (ActiveTime == TimeState.Permanent)
         {
-            IsSolid = true;
+            IsDangerous = true;
         }
         else
         {
-            IsSolid = (currentTime == ActiveTime);
+            IsDangerous = (currentTime == ActiveTime);
         }
     }
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        if (IsSolid)
+        if (IsDangerous)
         {
-            spriteBatch.Draw(texture, Hitbox, Color.White); // สีเข้ม เหยียบได้
+            spriteBatch.Draw(texture, Hitbox, Color.Red); // สีเข้ม เหยียบได้
         }
         else
         {
-            spriteBatch.Draw(texture, Hitbox, Color.White * 0.3f); // สีจาง ทะลุได้
+            spriteBatch.Draw(texture, Hitbox, Color.Red * 0.3f); // สีจาง ทะลุได้
         }
     }
 }
