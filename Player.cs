@@ -14,6 +14,10 @@ public class Player
     private float jumpForce = -12f;
     private bool isGrounded;
     public bool isDoubleJump = false;
+    public bool hasWallJump = true;
+    private bool isTouchingLeftWall;
+    private bool isTouchingRightWall;
+    private float wallSlideWall = 2f;
     private Texture2D texture;
     private KeyboardState previousKey;
 
@@ -36,38 +40,62 @@ public class Player
     {
         KeyboardState kState = Keyboard.GetState();
 
-        // 1. การเคลื่อนที่ซ้าย-ขวา
         Velocity.X = 0;
         if (kState.IsKeyDown(Keys.A) || kState.IsKeyDown(Keys.Left)) Velocity.X = -speed;
         if (kState.IsKeyDown(Keys.D) || kState.IsKeyDown(Keys.Right)) Velocity.X = speed;
 
-        Rectangle groundCheck = new Rectangle((int)Position.X, (int)Position.Y + Hitbox.Height, Hitbox.Width, 2);
+        Rectangle groundCheck = new Rectangle((int)Position.X, (int)Position.Y + 1, Hitbox.Height, Hitbox.Width);
         isGrounded = false;
+
+        Rectangle leftCheck = new Rectangle((int)Position.X - 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
+        isTouchingLeftWall = false;
+        Rectangle rightCheck = new Rectangle((int)Position.X + 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
+        isTouchingRightWall = false;
 
         foreach (var platform in platforms)
         {
-            if (platform.IsSolid && groundCheck.Intersects(platform.Hitbox))
+            if (platform.IsSolid)
             {
-                isGrounded = true;
-                isDoubleJump = false;
-                break;
+                if (groundCheck.Intersects(platform.Hitbox)) isGrounded = true;
+                if (leftCheck.Intersects(platform.Hitbox) && !isGrounded) isTouchingLeftWall = true;
+                if (rightCheck.Intersects(platform.Hitbox) && !isGrounded) isTouchingRightWall = true;
             }
         }
+
+        if (isGrounded)
+            isDoubleJump = false;
+
         bool justPressedSpace = kState.IsKeyDown(Keys.Space) && previousKey.IsKeyUp(Keys.Space);
 
-        // 2. กระโดด (ทำได้เมื่ออยู่บนพื้น)
-        if (justPressedSpace && isGrounded)
+        if (justPressedSpace)
         {
-            Velocity.Y = jumpForce;
-        }
-        // 2. Double Jump (ทำได้เมื่ออยู่กลางอากาศ)
-        else if (justPressedSpace && !isGrounded && !isDoubleJump)
-        {
-            Velocity.Y = jumpForce;
-            isDoubleJump = true;
+            if (isGrounded)
+                Velocity.Y = jumpForce;
+            else if (hasWallJump && isTouchingLeftWall)
+            {
+                Velocity.Y = jumpForce;
+                Velocity.X = speed;
+            }
+            else if (hasWallJump && isTouchingRightWall)
+            {
+                Velocity.Y = jumpForce;
+                Velocity.X = -speed;
+            }
+            else if (!isGrounded && !isDoubleJump)
+            {
+                Velocity.Y = jumpForce;
+                isDoubleJump = true;
+            }
         }
 
-        Velocity.Y += gravity;
+        if (hasWallJump && (isTouchingLeftWall || isTouchingRightWall) && Velocity.Y > 0)
+        {
+            Velocity.Y = wallSlideWall; 
+        }
+        else
+        {
+            Velocity.Y += gravity;
+        }
 
         Position.X += Velocity.X;
         CheckCollision(platforms, true);
