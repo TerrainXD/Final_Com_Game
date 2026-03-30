@@ -6,27 +6,28 @@ namespace FinalProject;
 
 public class Game1 : Game
 {
-    private GraphicsDeviceManager _graphics;
-    private SpriteBatch _spriteBatch;
+    private GraphicsDeviceManager graphics;
+    private SpriteBatch spriteBatch;
+    private SpriteFont font;
 
     private Player player;
     private List<Platform> platforms;
     private List<Spike> spikes;
     private TimeState currentTime;
     private KeyboardState previousKey;
-    private Texture2D dummyTexture; // ไว้สร้างภาพกล่องสี่เหลี่ยมสีขาวชั่วคราว
+    private Texture2D dummyTexture;
     private Camera camera;
 
     public Game1()
     {
-        _graphics = new GraphicsDeviceManager(this);
+        graphics = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
 
-        _graphics.PreferredBackBufferWidth = 1280;
-        _graphics.PreferredBackBufferHeight = 720;
+        graphics.PreferredBackBufferWidth = 1280;
+        graphics.PreferredBackBufferHeight = 720;
 
-        _graphics.ApplyChanges();
+        graphics.ApplyChanges();
     }
 
     private void LoadLevel()
@@ -87,11 +88,13 @@ public class Game1 : Game
 
     protected override void LoadContent()
     {
-        _spriteBatch = new SpriteBatch(GraphicsDevice);
+        spriteBatch = new SpriteBatch(GraphicsDevice);
 
         // สร้าง Texture สีขาวชั่วคราวสำหรับแพลตฟอร์มและตัวละคร
         dummyTexture = new Texture2D(GraphicsDevice, 1, 1);
         dummyTexture.SetData(new[] { Color.White });
+
+        font = Content.Load<SpriteFont>("GameFont");
 
         // สร้างตัวละคร
         // player = new Player(new Vector2(100, 100), dummyTexture);
@@ -144,24 +147,31 @@ public class Game1 : Game
     {
         // เปลี่ยนสีพื้นหลังตามกาลเวลาเพื่อบอกผู้เล่น
         GraphicsDevice.Clear(currentTime == TimeState.Present ? Color.CornflowerBlue : Color.DarkSlateBlue);
-
-        _spriteBatch.Begin(transformMatrix: camera.Transform);
+        spriteBatch.Begin(transformMatrix: camera.Transform);
 
         // วาดแพลตฟอร์ม
         foreach (var platform in platforms)
         {
-            platform.Draw(_spriteBatch);
+            platform.Draw(spriteBatch);
         }
 
         foreach (var spike in spikes)
         {
-            spike.Draw(_spriteBatch);
+            spike.Draw(spriteBatch);
         }
 
-        // วาดตัวละคร
-        player.Draw(_spriteBatch);
+        player.Draw(spriteBatch);
+        spriteBatch.End();
 
-        _spriteBatch.End();
+        spriteBatch.Begin();
+        spriteBatch.DrawString(font, "Double Jump Used " + player.isDoubleJump.ToString(),
+        new Vector2(20, 20),
+        Color.Black
+        );
+
+
+
+        spriteBatch.End();
 
         base.Draw(gameTime);
     }

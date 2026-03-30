@@ -10,10 +10,12 @@ public class Player
     public Rectangle Hitbox => new Rectangle((int)Position.X, (int)Position.Y, 32, 32);
 
     private float speed = 5f;
-    private float gravity = 0.5f; // ตัวละครต้องมีผลจากแรงโน้มถ่วง 
+    private float gravity = 0.5f;
     private float jumpForce = -12f;
     private bool isGrounded;
+    public bool isDoubleJump = false;
     private Texture2D texture;
+    private KeyboardState previousKey;
 
     public Vector2 SpawnPoint;
 
@@ -39,23 +41,41 @@ public class Player
         if (kState.IsKeyDown(Keys.A) || kState.IsKeyDown(Keys.Left)) Velocity.X = -speed;
         if (kState.IsKeyDown(Keys.D) || kState.IsKeyDown(Keys.Right)) Velocity.X = speed;
 
+        Rectangle groundCheck = new Rectangle((int)Position.X, (int)Position.Y + Hitbox.Height, Hitbox.Width, 2);
+        isGrounded = false;
+
+        foreach (var platform in platforms)
+        {
+            if (platform.IsSolid && groundCheck.Intersects(platform.Hitbox))
+            {
+                isGrounded = true;
+                isDoubleJump = false;
+                break;
+            }
+        }
+        bool justPressedSpace = kState.IsKeyDown(Keys.Space) && previousKey.IsKeyUp(Keys.Space);
+
         // 2. กระโดด (ทำได้เมื่ออยู่บนพื้น)
-        if (kState.IsKeyDown(Keys.Space) && isGrounded)
+        if (justPressedSpace && isGrounded)
         {
             Velocity.Y = jumpForce;
-            isGrounded = false;
+        }
+        // 2. Double Jump (ทำได้เมื่ออยู่กลางอากาศ)
+        else if (justPressedSpace && !isGrounded && !isDoubleJump)
+        {
+            Velocity.Y = jumpForce;
+            isDoubleJump = true;
         }
 
         Velocity.Y += gravity;
 
-        // 4. อัปเดตตำแหน่งแกน X และเช็คชน
         Position.X += Velocity.X;
         CheckCollision(platforms, true);
 
-        // 5. อัปเดตตำแหน่งแกน Y และเช็คชน
         Position.Y += Velocity.Y;
-        isGrounded = false; // รีเซ็ตก่อนเช็คชน
         CheckCollision(platforms, false);
+
+        previousKey = kState;
     }
 
     private void CheckCollision(List<Platform> platforms, bool isHorizontal)
@@ -76,7 +96,6 @@ public class Player
                     if (Velocity.Y > 0)
                     {
                         Position.Y = platform.Hitbox.Top - Hitbox.Height;
-                        isGrounded = true; // เหยียบพื้นแล้ว
                     }
                     else if (Velocity.Y < 0)
                     {
