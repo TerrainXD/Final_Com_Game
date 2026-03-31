@@ -1,7 +1,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace FinalProject; // ให้ตรงกับชื่อ namespace ของคุณครับ
+namespace FinalProject;
 
 public class Camera
 {

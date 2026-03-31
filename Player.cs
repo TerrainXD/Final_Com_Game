@@ -10,10 +10,20 @@ public class Player
     public Rectangle Hitbox => new Rectangle((int)Position.X, (int)Position.Y, 32, 32);
 
     private float speed = 5f;
-    private float gravity = 0.5f; // ตัวละครต้องมีผลจากแรงโน้มถ่วง 
+    private float gravity = 0.5f;
     private float jumpForce = -12f;
     private bool isGrounded;
+    public bool isDoubleJump = false;
+    public bool hasWallJump = true;
+    private float wallJumpForce = 5f;  // ความแรงในการพุ่งออกข้าง (ปรับให้เยอะกว่า speed ปกติได้)
+    private int wallJumpTimer = 0;     // ตัวนับเวลาพุ่ง
+    private int wallJumpLockTime = 12; // ระยะเวลาล็อคปุ่ม (12 เฟรม = ประมาณ 0.2 วินาที)
+    private float forcedDirection = 0f;// ทิศทางที่ถูกบังคับพุ่ง (ซ้ายหรือขวา)
+    private bool isTouchingLeftWall;
+    private bool isTouchingRightWall;
+    private float wallSlideWall = 2f;
     private Texture2D texture;
+    private KeyboardState previousKey;
 
     public Vector2 SpawnPoint;
     public Vector2 VisualPosition;
@@ -32,90 +42,149 @@ public class Player
         Velocity = Vector2.Zero;
     }
 
-    public void Update(List<Platform> platforms, List<Box> boxes) // <-- Add List<Box> here
-        {
-            KeyboardState kState = Keyboard.GetState();
+    public void Update(List<Platform> platforms, List<Box> boxes)
+    {
+        KeyboardState kState = Keyboard.GetState();
 
-            // 1. Horizontal Movement
+        Velocity.X = 0;
+        if (kState.IsKeyDown(Keys.A) || kState.IsKeyDown(Keys.Left)) Velocity.X = -speed;
+        if (kState.IsKeyDown(Keys.D) || kState.IsKeyDown(Keys.Right)) Velocity.X = speed;
+
+        Rectangle groundCheck = new Rectangle((int)Position.X, (int)Position.Y + 1, Hitbox.Width, Hitbox.Height);
+        isGrounded = false;
+        Rectangle leftCheck = new Rectangle((int)Position.X - 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
+        isTouchingLeftWall = false;
+        Rectangle rightCheck = new Rectangle((int)Position.X + 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
+        isTouchingRightWall = false;
+
+        foreach (var platform in platforms)
+        {
+            if (platform.IsSolid)
+            {
+                if (groundCheck.Intersects(platform.Hitbox)) isGrounded = true;
+                if (leftCheck.Intersects(platform.Hitbox) && !isGrounded) isTouchingLeftWall = true;
+                if (rightCheck.Intersects(platform.Hitbox) && !isGrounded) isTouchingRightWall = true;
+            }
+        }
+
+        if (isGrounded)
+            isDoubleJump = false;
+
+        if (wallJumpTimer > 0)
+        {
+            // ถ้ากำลังอยู่ในช่วง Wall Jump จะบังคับพุ่งด้วยความแรง wallJumpForce
+            Velocity.X = forcedDirection * wallJumpForce;
+            wallJumpTimer--; // นับเวลาถอยหลัง
+        }
+        else
+        {
+            // ถ้าเวลาพุ่งหมดแล้ว กลับมาเดินตามปุ่มกดปกติ
             Velocity.X = 0;
             if (kState.IsKeyDown(Keys.A) || kState.IsKeyDown(Keys.Left)) Velocity.X = -speed;
             if (kState.IsKeyDown(Keys.D) || kState.IsKeyDown(Keys.Right)) Velocity.X = speed;
+        }
 
-            // 2. Jumping
-            if (kState.IsKeyDown(Keys.Space) && isGrounded)
+        bool justPressedSpace = kState.IsKeyDown(Keys.Space) && previousKey.IsKeyUp(Keys.Space);
+
+        if (justPressedSpace)
+        {
+            if (isGrounded)
+                Velocity.Y = jumpForce;
+            else if (hasWallJump && isTouchingLeftWall)
             {
                 Velocity.Y = jumpForce;
-                isGrounded = false;
+                wallJumpTimer = wallJumpLockTime;
+                forcedDirection = 1f;
+                Velocity.X = speed;
             }
-
-            Velocity.Y += gravity;
-
-            // 4. Update X and check collisions
-            Position.X += Velocity.X;
-            CheckCollision(platforms, boxes, true);
-
-            // 5. Update Y and check collisions
-            Position.Y += Velocity.Y;
-            isGrounded = false; // Reset before checking
-            CheckCollision(platforms, boxes, false);
-            VisualPosition.X = MathHelper.Lerp(VisualPosition.X, Position.X, 0.2f);
-            VisualPosition.Y = MathHelper.Lerp(VisualPosition.Y, Position.Y, 0.2f);
+            else if (hasWallJump && isTouchingRightWall)
+            {
+                Velocity.Y = jumpForce;
+                wallJumpTimer = wallJumpLockTime;
+                forcedDirection = -1f;
+                Velocity.X = -speed;
+            }
+            else if (!isGrounded && !isDoubleJump)
+            {
+                Velocity.Y = jumpForce;
+                isDoubleJump = true;
+            }
         }
+
+        if (hasWallJump && (isTouchingLeftWall || isTouchingRightWall) && Velocity.Y > 0)
+        {
+            Velocity.Y = wallSlideWall;
+        }
+        else
+        {
+            Velocity.Y += gravity;
+        }
+
+        Position.X += Velocity.X;
+        CheckCollision(platforms, boxes, true);
+
+        Position.Y += Velocity.Y;
+        CheckCollision(platforms, boxes, false);
+
+        VisualPosition.X = MathHelper.Lerp(VisualPosition.X, Position.X, 0.2f);
+        VisualPosition.Y = MathHelper.Lerp(VisualPosition.Y, Position.Y, 0.2f);
+
+        previousKey = kState;
+    }
 
     private void CheckCollision(List<Platform> platforms, List<Box> boxes, bool isHorizontal)
+    {
+        // 1. เช็คการชนกับพื้น/กำแพง (Platform)
+        foreach (var platform in platforms)
         {
-            // Check collision against platforms
-            foreach (var platform in platforms)
+            if (platform.IsSolid && Hitbox.Intersects(platform.Hitbox))
             {
-                if (platform.IsSolid && Hitbox.Intersects(platform.Hitbox))
-                {
-                    ResolveCollision(platform.Hitbox, isHorizontal);
-                }
-            }
-
-            // Check collision against pushable boxes
-            foreach (var box in boxes)
-            {
-                if (Hitbox.Intersects(box.Hitbox))
-                {
-                    if (isHorizontal)
-                    {
-                        // Push the box!
-                        box.TryPush(Velocity.X, platforms);
-                        
-                        // Stop the player so they don't walk through the box
-                        ResolveCollision(box.Hitbox, true);
-                    }
-                    else
-                    {
-                        // Treat the box like a normal platform on the Y axis (so you can stand on it)
-                        ResolveCollision(box.Hitbox, false);
-                    }
-                }
+                ResolveCollision(platform.Hitbox, isHorizontal);
             }
         }
 
+        // 2. เช็คการชนกับกล่อง (Box) **ต้องแยกออกมาเป็นอีกลูปนึง**
+        foreach (var box in boxes)
+        {
+            if (Hitbox.Intersects(box.Hitbox))
+            {
+                if (isHorizontal)
+                {
+                    // ดันกล่องไปตามความเร็วของตัวละคร
+                    box.TryPush(Velocity.X, platforms);
+
+                    // หยุดตัวละครไม่ให้เดินทะลุกล่อง
+                    ResolveCollision(box.Hitbox, true);
+                }
+                else
+                {
+                    // ถ้าหล่นลงมาทับกล่อง (แกน Y) ให้เหยียบกล่องได้เหมือนเป็นพื้นปกติ
+                    ResolveCollision(box.Hitbox, false);
+                }
+            }
+        }
+    }
     private void ResolveCollision(Rectangle targetHitbox, bool isHorizontal)
+    {
+        if (isHorizontal)
         {
-            if (isHorizontal)
-            {
-                if (Velocity.X > 0) Position.X = targetHitbox.Left - Hitbox.Width;
-                else if (Velocity.X < 0) Position.X = targetHitbox.Right;
-            }
-            else
-            {
-                if (Velocity.Y > 0)
-                {
-                    Position.Y = targetHitbox.Top - Hitbox.Height;
-                    isGrounded = true; 
-                }
-                else if (Velocity.Y < 0)
-                {
-                    Position.Y = targetHitbox.Bottom;
-                }
-                Velocity.Y = 0; 
-            }
+            if (Velocity.X > 0) Position.X = targetHitbox.Left - Hitbox.Width;
+            else if (Velocity.X < 0) Position.X = targetHitbox.Right;
         }
+        else
+        {
+            if (Velocity.Y > 0)
+            {
+                Position.Y = targetHitbox.Top - Hitbox.Height;
+                isGrounded = true;
+            }
+            else if (Velocity.Y < 0)
+            {
+                Position.Y = targetHitbox.Bottom;
+            }
+            Velocity.Y = 0;
+        }
+    }
 
     public void CheckSpikeCollision(List<Spike> spikes)
     {
@@ -130,9 +199,9 @@ public class Player
     }
 
     public void Draw(SpriteBatch spriteBatch)
-        {
-            // NEW: Make sure your player's Draw method uses the VisualPosition!
-            Rectangle drawRect = new Rectangle((int)VisualPosition.X, (int)VisualPosition.Y, 32, 32);
-            spriteBatch.Draw(texture, drawRect, Color.White); 
-        }
+    {
+        // NEW: Make sure your player's Draw method uses the VisualPosition!
+        Rectangle drawRect = new Rectangle((int)VisualPosition.X, (int)VisualPosition.Y, 32, 32);
+        spriteBatch.Draw(texture, drawRect, Color.White);
+    }
 }

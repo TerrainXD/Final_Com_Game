@@ -6,45 +6,52 @@ namespace FinalProject;
 
 public class Game1 : Game
 {
-    private GraphicsDeviceManager _graphics;
-    private SpriteBatch _spriteBatch;
+    private GraphicsDeviceManager graphics;
+    private SpriteBatch spriteBatch;
+    private SpriteFont font;
 
     private Player player;
     private List<Platform> platforms;
     private List<Spike> spikes;
     private TimeState currentTime;
     private KeyboardState previousKey;
-    private Texture2D dummyTexture; // ไว้สร้างภาพกล่องสี่เหลี่ยมสีขาวชั่วคราว
+    private Texture2D dummyTexture;
     private Camera camera;
     private List<Box> boxes;
 
     public Game1()
     {
-        _graphics = new GraphicsDeviceManager(this);
+        graphics = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
 
-        _graphics.PreferredBackBufferWidth = 1280;
-        _graphics.PreferredBackBufferHeight = 720;
+        graphics.PreferredBackBufferWidth = 1280;
+        graphics.PreferredBackBufferHeight = 720;
 
-        _graphics.ApplyChanges();
+        graphics.ApplyChanges();
     }
 
     private void LoadLevel()
     {
         string[] levelDesign = new string[]
-        {
-        "..................................................",
-        "..................................................",
-        "..................................................",
-        "...............................2222...............",
-        "..................................................",
-        "....P...............S...................111.......",
-        "..................2222..........2222..............",
-        "00000000...22222.........1111.................1111",
-        "00000000.....B.2...SSS............SSSS............",
-        "00000000000000000000000000000000000000000000000000"
-    };
+     {
+        "0000000000000000000000000000000000000000",
+        "0......................................0",
+        "0......................................0",
+        "0.......................0000000........0",
+        "0.......................0.....0........0",
+        "0.......................0.....0........0",
+        "0.......................00...00........0",
+        "0........................0...0.........0",
+        "0........................0...0.........0",
+        "0........................1...2.........0", // โซนกำแพงสลับเวลา!
+        "0........................1...2.........0",
+        "0..........000....00.....1...2.........0",
+        "0..B.........0...........0...0.........0",
+        "0....P.......0......B....0...0.........0",
+        "0000000......0SSSSSSSSSSS0SSS0SSSSSSSSS0",
+        "0000000000000000000000000000000000000000"
+     };
 
         int tileSize = 64;
 
@@ -73,7 +80,7 @@ public class Game1 : Game
                 {
                     player = new Player(new Vector2(x * tileSize, y * tileSize), dummyTexture);
                 }
-                else if (tile == 'B') // <-- Add this block
+                else if (tile == 'B')
                 {
                     boxes.Add(new Box(new Vector2(x * tileSize, y * tileSize), dummyTexture));
                 }
@@ -93,11 +100,13 @@ public class Game1 : Game
 
     protected override void LoadContent()
     {
-        _spriteBatch = new SpriteBatch(GraphicsDevice);
+        spriteBatch = new SpriteBatch(GraphicsDevice);
 
         // สร้าง Texture สีขาวชั่วคราวสำหรับแพลตฟอร์มและตัวละคร
         dummyTexture = new Texture2D(GraphicsDevice, 1, 1);
         dummyTexture.SetData(new[] { Color.White });
+
+        font = Content.Load<SpriteFont>("GameFont");
 
         // สร้างตัวละคร
         // player = new Player(new Vector2(100, 100), dummyTexture);
@@ -127,15 +136,15 @@ public class Game1 : Game
         }
 
         // อัปเดตสถานะของแพลตฟอร์มตามเวลาปัจจุบัน
-// Inside Update():
+        // Inside Update():
         foreach (var platform in platforms) platform.Update(currentTime);
         foreach (var spike in spikes) spike.Update(currentTime);
 
 
         // Give the box a reference to the player so it can push them if needed!
-        foreach (var box in boxes) 
+        foreach (var box in boxes)
         {
-            box.Update(platforms, player); 
+            box.Update(platforms, player);
         }
 
         // อัปเดตตัวละคร
@@ -153,18 +162,35 @@ public class Game1 : Game
     {
         // เปลี่ยนสีพื้นหลังตามกาลเวลาเพื่อบอกผู้เล่น
         GraphicsDevice.Clear(currentTime == TimeState.Present ? Color.CornflowerBlue : Color.DarkSlateBlue);
-
-        _spriteBatch.Begin(transformMatrix: camera.Transform);
+        spriteBatch.Begin(transformMatrix: camera.Transform);
 
         // วาดแพลตฟอร์ม
-        foreach (var platform in platforms) platform.Draw(_spriteBatch);
-        foreach (var spike in spikes) spike.Draw(_spriteBatch);
-        foreach (var box in boxes) box.Draw(_spriteBatch); // <-- Add this
+        foreach (var platform in platforms)
+        {
+            platform.Draw(spriteBatch);
+        }
 
-        // วาดตัวละคร
-        player.Draw(_spriteBatch);
+        foreach (var spike in spikes)
+        {
+            spike.Draw(spriteBatch);
+        }
+        foreach (var box in boxes)
+        {
+            box.Draw(spriteBatch);
+        }
 
-        _spriteBatch.End();
+        player.Draw(spriteBatch);
+        spriteBatch.End();
+
+        spriteBatch.Begin();
+        spriteBatch.DrawString(font, "Double Jump Used " + player.isDoubleJump.ToString(),
+        new Vector2(20, 20),
+        Color.Black
+        );
+
+
+
+        spriteBatch.End();
 
         base.Draw(gameTime);
     }
