@@ -15,6 +15,10 @@ public class Player
     private bool isGrounded;
     public bool isDoubleJump = false;
     public bool hasWallJump = true;
+    private float wallJumpForce = 5f;  // ความแรงในการพุ่งออกข้าง (ปรับให้เยอะกว่า speed ปกติได้)
+    private int wallJumpTimer = 0;     // ตัวนับเวลาพุ่ง
+    private int wallJumpLockTime = 12; // ระยะเวลาล็อคปุ่ม (12 เฟรม = ประมาณ 0.2 วินาที)
+    private float forcedDirection = 0f;// ทิศทางที่ถูกบังคับพุ่ง (ซ้ายหรือขวา)
     private bool isTouchingLeftWall;
     private bool isTouchingRightWall;
     private float wallSlideWall = 2f;
@@ -44,9 +48,8 @@ public class Player
         if (kState.IsKeyDown(Keys.A) || kState.IsKeyDown(Keys.Left)) Velocity.X = -speed;
         if (kState.IsKeyDown(Keys.D) || kState.IsKeyDown(Keys.Right)) Velocity.X = speed;
 
-        Rectangle groundCheck = new Rectangle((int)Position.X, (int)Position.Y + 1, Hitbox.Height, Hitbox.Width);
+        Rectangle groundCheck = new Rectangle((int)Position.X, (int)Position.Y + 1, Hitbox.Width, Hitbox.Height);
         isGrounded = false;
-
         Rectangle leftCheck = new Rectangle((int)Position.X - 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
         isTouchingLeftWall = false;
         Rectangle rightCheck = new Rectangle((int)Position.X + 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
@@ -65,6 +68,20 @@ public class Player
         if (isGrounded)
             isDoubleJump = false;
 
+        if (wallJumpTimer > 0)
+        {
+            // ถ้ากำลังอยู่ในช่วง Wall Jump จะบังคับพุ่งด้วยความแรง wallJumpForce
+            Velocity.X = forcedDirection * wallJumpForce;
+            wallJumpTimer--; // นับเวลาถอยหลัง
+        }
+        else
+        {
+            // ถ้าเวลาพุ่งหมดแล้ว กลับมาเดินตามปุ่มกดปกติ
+            Velocity.X = 0;
+            if (kState.IsKeyDown(Keys.A) || kState.IsKeyDown(Keys.Left)) Velocity.X = -speed;
+            if (kState.IsKeyDown(Keys.D) || kState.IsKeyDown(Keys.Right)) Velocity.X = speed;
+        }
+
         bool justPressedSpace = kState.IsKeyDown(Keys.Space) && previousKey.IsKeyUp(Keys.Space);
 
         if (justPressedSpace)
@@ -74,11 +91,15 @@ public class Player
             else if (hasWallJump && isTouchingLeftWall)
             {
                 Velocity.Y = jumpForce;
+                wallJumpTimer = wallJumpLockTime;
+                forcedDirection = 1f;
                 Velocity.X = speed;
             }
             else if (hasWallJump && isTouchingRightWall)
             {
                 Velocity.Y = jumpForce;
+                wallJumpTimer = wallJumpLockTime;
+                forcedDirection = -1f;
                 Velocity.X = -speed;
             }
             else if (!isGrounded && !isDoubleJump)
@@ -90,7 +111,7 @@ public class Player
 
         if (hasWallJump && (isTouchingLeftWall || isTouchingRightWall) && Velocity.Y > 0)
         {
-            Velocity.Y = wallSlideWall; 
+            Velocity.Y = wallSlideWall;
         }
         else
         {
