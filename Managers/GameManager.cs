@@ -1,6 +1,8 @@
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System;
 using System.Collections.Generic;
 
 namespace FinalProject.Managers
@@ -13,6 +15,15 @@ namespace FinalProject.Managers
         public List<Box> boxes;
         public TimeState currentTime;
         private Texture2D dummyTexture;
+        private Texture2D heartTexture;
+        public ItemManager itemManager;
+        public UIManager uiManager;
+
+        public int currentLevel = 1;
+        public int maxLevel = 2;
+
+        public Rectangle exitDoor;
+        public bool hasExitDoor;
 
         public GameManager()
         {
@@ -22,9 +33,14 @@ namespace FinalProject.Managers
             currentTime = TimeState.Present;
         }
 
-        public void LoadContent(Texture2D texture)
+        public void LoadContent(ContentManager content, Texture2D dummy)
         {
-            dummyTexture = texture;
+            dummyTexture = dummy;
+            Texture2D heartTex = content.Load<Texture2D>("Image/Heart");
+            SpriteFont font = content.Load<SpriteFont>("GameFont");
+
+            itemManager = new ItemManager(heartTex);
+            uiManager = new UIManager(font, heartTex);
             LoadLevel();
         }
 
@@ -42,6 +58,32 @@ namespace FinalProject.Managers
 
             player.Update(platforms, boxes);
             player.CheckSpikeCollision(spikes);
+            itemManager.Update(player);
+
+            if (player.IsDead)
+            {
+                LoadLevel();
+                return;
+            }
+            if (player.Position.Y > 1000)
+            {
+                LoadLevel();
+                return;
+            }
+
+            if (hasExitDoor && player.Hitbox.Intersects(exitDoor))
+            {
+                if (currentLevel < maxLevel)
+                {
+                    currentLevel++;
+                    LoadLevel();
+                }
+                else
+                {
+                    currentLevel = 1;
+                    LoadLevel();
+                }
+            }
         }
 
         public void Draw(SpriteBatch spriteBatch)
@@ -49,20 +91,25 @@ namespace FinalProject.Managers
             foreach (var platform in platforms) platform.Draw(spriteBatch);
             foreach (var spike in spikes) spike.Draw(spriteBatch);
             foreach (var box in boxes) box.Draw(spriteBatch);
+            if (hasExitDoor) spriteBatch.Draw(dummyTexture, exitDoor, Color.Gold);
+            itemManager.Draw(spriteBatch);
             player.Draw(spriteBatch);
         }
 
-        private void LoadLevel()
+        private string[] GetLevelDesign(int levelNumber)
         {
-            // วางดีไซน์ด่านของคุณไว้ตรงนี้เหมือนเดิมครับ
-            string[] levelDesign = new string[]
+            switch (levelNumber)
             {
+                case 1:
+                    return new string[]
+                    {
+
                 "0000000000000000000000000000000000000000",
                 "0......................................0",
                 "0......................................0",
                 "0.......................0000000........0",
                 "0.......................0.....0........0",
-                "0.......................0.....0........0",
+                "0.......................0....D0........0",
                 "0.......................00...00........0",
                 "0........................0...0.........0",
                 "0........................0...0.........0",
@@ -70,10 +117,33 @@ namespace FinalProject.Managers
                 "0........................1...2.........0",
                 "0..........000....00.....1...2.........0",
                 "0..B.........0...........0...0.........0",
-                "0....P.......0......B....0...0.........0",
+                "0.H..P.......0......B....0...0.........0",
                 "0000000......0SSSSSSSSSSS0SSS0SSSSSSSSS0",
                 "0000000000000000000000000000000000000000"
             };
+                case 2:
+                    return new string[]
+                    {
+                "0000000000000000000000000000000000000000",
+                "0P....................................D0",
+                "000000..............................0000",
+                "0....0..............................0..0",
+                "0SSSS0SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS0SS0",
+                "0000000000000000000000000000000000000000"
+                };
+                default:
+                    return new string[] { "00P0000D00" };
+            }
+        }
+        private void LoadLevel()
+        {
+            platforms.Clear();
+            spikes.Clear();
+            boxes.Clear();
+            itemManager.hearts.Clear();
+            hasExitDoor = false;
+
+            string[] levelDesign = GetLevelDesign(currentLevel);
 
             int tileSize = 64;
 
@@ -90,8 +160,15 @@ namespace FinalProject.Managers
                     else if (tile == 'S') spikes.Add(new Spike(rect, TimeState.Present, dummyTexture));
                     else if (tile == 'P') player = new Player(new Vector2(x * tileSize, y * tileSize), dummyTexture);
                     else if (tile == 'B') boxes.Add(new Box(new Vector2(x * tileSize, y * tileSize), dummyTexture));
+                    else if (tile == 'H') itemManager.AddHeart(rect);
+                    else if (tile == 'D')
+                    {
+                        exitDoor = rect;
+                        hasExitDoor = true;
+                    }
                 }
             }
+
         }
     }
 }

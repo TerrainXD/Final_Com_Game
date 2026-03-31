@@ -10,15 +10,8 @@ public class Game1 : Game
     private GraphicsDeviceManager graphics;
     private SpriteBatch spriteBatch;
     private SpriteFont font;
-
-    private Player player;
-    private List<Platform> platforms;
-    private List<Spike> spikes;
-    private TimeState currentTime;
-    private KeyboardState previousKey;
     private Texture2D dummyTexture;
     private Camera camera;
-    private List<Box> boxes;
 
     private GameManager gameManager;
 
@@ -48,7 +41,7 @@ public class Game1 : Game
         dummyTexture.SetData(new[] { Color.White });
 
         font = Content.Load<SpriteFont>("GameFont");
-        gameManager.LoadContent(dummyTexture);
+        gameManager.LoadContent(Content, dummyTexture);
     }
 
     protected override void Update(GameTime gameTime)
@@ -68,13 +61,13 @@ public class Game1 : Game
     {
         // เปลี่ยนสีพื้นหลังตามกาลเวลาเพื่อบอกผู้เล่น
         GraphicsDevice.Clear(gameManager.currentTime == TimeState.Present ? Color.CornflowerBlue : Color.DarkSlateBlue);
-        spriteBatch.Begin(transformMatrix: camera.Transform);
 
+        spriteBatch.Begin(transformMatrix: camera.Transform);
         gameManager.Draw(spriteBatch);
         spriteBatch.End();
 
         spriteBatch.Begin();
-        spriteBatch.DrawString(font, "Double Jump Used " + gameManager.player.isDoubleJump.ToString(), new Vector2(20, 20), Color.Black);
+        gameManager.uiManager.Draw(spriteBatch, gameManager.player, gameManager.currentTime);
         spriteBatch.End();
 
         base.Draw(gameTime);
