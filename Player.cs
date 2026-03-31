@@ -1,7 +1,9 @@
+using FinalProject.Managers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
+using System.Runtime.Serialization.Formatters;
 
 public class Player
 {
@@ -10,6 +12,7 @@ public class Player
     public Rectangle Hitbox => new Rectangle((int)Position.X, (int)Position.Y, 32, 32);
 
     private float speed = 5f;
+    public int HP { get; set; } = 3;
     private float gravity = 0.5f;
     private float jumpForce = -12f;
     private bool isGrounded;
@@ -37,18 +40,23 @@ public class Player
 
     public void Die()
     {
-        Position = SpawnPoint;
-        VisualPosition = SpawnPoint;
-        Velocity = Vector2.Zero;
+        if (HP == 0)
+        {
+            Position = SpawnPoint;
+            VisualPosition = SpawnPoint;
+            Velocity = Vector2.Zero;
+        }
+        else
+        {
+            HP--;
+        }
     }
 
     public void Update(List<Platform> platforms, List<Box> boxes)
     {
-        KeyboardState kState = Keyboard.GetState();
-
         Velocity.X = 0;
-        if (kState.IsKeyDown(Keys.A) || kState.IsKeyDown(Keys.Left)) Velocity.X = -speed;
-        if (kState.IsKeyDown(Keys.D) || kState.IsKeyDown(Keys.Right)) Velocity.X = speed;
+        if (InputManager.IsKeyDown(Keys.A) || InputManager.IsKeyDown(Keys.Left)) Velocity.X = -speed;
+        if (InputManager.IsKeyDown(Keys.D) || InputManager.IsKeyDown(Keys.Right)) Velocity.X = speed;
 
         Rectangle groundCheck = new Rectangle((int)Position.X, (int)Position.Y + 1, Hitbox.Width, Hitbox.Height);
         isGrounded = false;
@@ -67,6 +75,13 @@ public class Player
             }
         }
 
+        foreach (var box in boxes)
+        {
+            if (groundCheck.Intersects(box.Hitbox)) isGrounded = true;
+            if (leftCheck.Intersects(box.Hitbox) && !isGrounded) isTouchingLeftWall = true;
+            if (rightCheck.Intersects(box.Hitbox) && !isGrounded) isTouchingRightWall = true;
+        }
+
         if (isGrounded)
             isDoubleJump = false;
 
@@ -80,11 +95,11 @@ public class Player
         {
             // ถ้าเวลาพุ่งหมดแล้ว กลับมาเดินตามปุ่มกดปกติ
             Velocity.X = 0;
-            if (kState.IsKeyDown(Keys.A) || kState.IsKeyDown(Keys.Left)) Velocity.X = -speed;
-            if (kState.IsKeyDown(Keys.D) || kState.IsKeyDown(Keys.Right)) Velocity.X = speed;
+            if (InputManager.IsKeyDown(Keys.A) || InputManager.IsKeyDown(Keys.Left)) Velocity.X = -speed;
+            if (InputManager.IsKeyDown(Keys.D) || InputManager.IsKeyDown(Keys.Right)) Velocity.X = speed;
         }
 
-        bool justPressedSpace = kState.IsKeyDown(Keys.Space) && previousKey.IsKeyUp(Keys.Space);
+        bool justPressedSpace = InputManager.IsKeyDown(Keys.Space) && InputManager.IsKeyPressed(Keys.Space);
 
         if (justPressedSpace)
         {
@@ -129,7 +144,6 @@ public class Player
         VisualPosition.X = MathHelper.Lerp(VisualPosition.X, Position.X, 0.2f);
         VisualPosition.Y = MathHelper.Lerp(VisualPosition.Y, Position.Y, 0.2f);
 
-        previousKey = kState;
     }
 
     private void CheckCollision(List<Platform> platforms, List<Box> boxes, bool isHorizontal)
@@ -177,6 +191,7 @@ public class Player
             {
                 Position.Y = targetHitbox.Top - Hitbox.Height;
                 isGrounded = true;
+                isDoubleJump = false;
             }
             else if (Velocity.Y < 0)
             {
