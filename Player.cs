@@ -26,21 +26,23 @@ public class Player
     private KeyboardState previousKey;
 
     public Vector2 SpawnPoint;
-
+    public Vector2 VisualPosition;
     public Player(Vector2 startPos, Texture2D tex)
     {
         Position = startPos;
         texture = tex;
         SpawnPoint = startPos;
+        VisualPosition = startPos;
     }
 
     public void Die()
     {
         Position = SpawnPoint;
+        VisualPosition = SpawnPoint;
         Velocity = Vector2.Zero;
     }
 
-    public void Update(List<Platform> platforms)
+    public void Update(List<Platform> platforms, List<Box> boxes)
     {
         KeyboardState kState = Keyboard.GetState();
 
@@ -119,40 +121,68 @@ public class Player
         }
 
         Position.X += Velocity.X;
-        CheckCollision(platforms, true);
+        CheckCollision(platforms, boxes, true);
 
         Position.Y += Velocity.Y;
-        CheckCollision(platforms, false);
+        CheckCollision(platforms, boxes, false);
+
+        VisualPosition.X = MathHelper.Lerp(VisualPosition.X, Position.X, 0.2f);
+        VisualPosition.Y = MathHelper.Lerp(VisualPosition.Y, Position.Y, 0.2f);
 
         previousKey = kState;
     }
 
-    private void CheckCollision(List<Platform> platforms, bool isHorizontal)
+    private void CheckCollision(List<Platform> platforms, List<Box> boxes, bool isHorizontal)
     {
+        // 1. เช็คการชนกับพื้น/กำแพง (Platform)
         foreach (var platform in platforms)
         {
             if (platform.IsSolid && Hitbox.Intersects(platform.Hitbox))
             {
+                ResolveCollision(platform.Hitbox, isHorizontal);
+            }
+        }
+
+        // 2. เช็คการชนกับกล่อง (Box) **ต้องแยกออกมาเป็นอีกลูปนึง**
+        foreach (var box in boxes)
+        {
+            if (Hitbox.Intersects(box.Hitbox))
+            {
                 if (isHorizontal)
                 {
-                    // ชนซ้าย-ขวา
-                    if (Velocity.X > 0) Position.X = platform.Hitbox.Left - Hitbox.Width;
-                    else if (Velocity.X < 0) Position.X = platform.Hitbox.Right;
+                    // ดันกล่องไปตามความเร็วของตัวละคร
+                    box.TryPush(Velocity.X, platforms);
+
+                    // หยุดตัวละครไม่ให้เดินทะลุกล่อง
+                    ResolveCollision(box.Hitbox, true);
                 }
                 else
                 {
-                    // ชนบน-ล่าง
-                    if (Velocity.Y > 0)
-                    {
-                        Position.Y = platform.Hitbox.Top - Hitbox.Height;
-                    }
-                    else if (Velocity.Y < 0)
-                    {
-                        Position.Y = platform.Hitbox.Bottom;
-                    }
-                    Velocity.Y = 0; // หยุดความเร็วแกน Y เมื่อชน
+                    // ถ้าหล่นลงมาทับกล่อง (แกน Y) ให้เหยียบกล่องได้เหมือนเป็นพื้นปกติ
+                    ResolveCollision(box.Hitbox, false);
                 }
             }
+        }
+    }
+    private void ResolveCollision(Rectangle targetHitbox, bool isHorizontal)
+    {
+        if (isHorizontal)
+        {
+            if (Velocity.X > 0) Position.X = targetHitbox.Left - Hitbox.Width;
+            else if (Velocity.X < 0) Position.X = targetHitbox.Right;
+        }
+        else
+        {
+            if (Velocity.Y > 0)
+            {
+                Position.Y = targetHitbox.Top - Hitbox.Height;
+                isGrounded = true;
+            }
+            else if (Velocity.Y < 0)
+            {
+                Position.Y = targetHitbox.Bottom;
+            }
+            Velocity.Y = 0;
         }
     }
 
@@ -170,6 +200,8 @@ public class Player
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        spriteBatch.Draw(texture, Hitbox, Color.Blue);
+        // NEW: Make sure your player's Draw method uses the VisualPosition!
+        Rectangle drawRect = new Rectangle((int)VisualPosition.X, (int)VisualPosition.Y, 32, 32);
+        spriteBatch.Draw(texture, drawRect, Color.White);
     }
 }

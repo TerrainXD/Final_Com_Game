@@ -17,6 +17,7 @@ public class Game1 : Game
     private KeyboardState previousKey;
     private Texture2D dummyTexture;
     private Camera camera;
+    private List<Box> boxes;
 
     public Game1()
     {
@@ -46,8 +47,8 @@ public class Game1 : Game
         "0........................1...2.........0", // โซนกำแพงสลับเวลา!
         "0........................1...2.........0",
         "0..........000....00.....1...2.........0",
-        "0............0...........0...0.........0",
-        "0....P.......0...........0...0.........0",
+        "0..B.........0...........0...0.........0",
+        "0....P.......0......B....0...0.........0",
         "0000000......0SSSSSSSSSSS0SSS0SSSSSSSSS0",
         "0000000000000000000000000000000000000000"
      };
@@ -79,6 +80,10 @@ public class Game1 : Game
                 {
                     player = new Player(new Vector2(x * tileSize, y * tileSize), dummyTexture);
                 }
+                else if (tile == 'B')
+                {
+                    boxes.Add(new Box(new Vector2(x * tileSize, y * tileSize), dummyTexture));
+                }
             }
         }
     }
@@ -88,6 +93,7 @@ public class Game1 : Game
         currentTime = TimeState.Present;
         platforms = new List<Platform>();
         spikes = new List<Spike>();
+        boxes = new List<Box>(); // <-- Add this
         camera = new Camera();
         base.Initialize();
     }
@@ -130,19 +136,22 @@ public class Game1 : Game
         }
 
         // อัปเดตสถานะของแพลตฟอร์มตามเวลาปัจจุบัน
-        foreach (var platform in platforms)
-        {
-            platform.Update(currentTime);
-        }
+        // Inside Update():
+        foreach (var platform in platforms) platform.Update(currentTime);
+        foreach (var spike in spikes) spike.Update(currentTime);
 
-        foreach (var spike in spikes)
+
+        // Give the box a reference to the player so it can push them if needed!
+        foreach (var box in boxes)
         {
-            spike.Update(currentTime);
+            box.Update(platforms, player);
         }
 
         // อัปเดตตัวละคร
-        player.Update(platforms);
+        player.Update(platforms, boxes);
         player.CheckSpikeCollision(spikes);
+
+
 
         previousKey = currentKey;
         camera.Follow(player, GraphicsDevice);
@@ -164,6 +173,10 @@ public class Game1 : Game
         foreach (var spike in spikes)
         {
             spike.Draw(spriteBatch);
+        }
+        foreach (var box in boxes)
+        {
+            box.Draw(spriteBatch);
         }
 
         player.Draw(spriteBatch);
