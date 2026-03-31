@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.Serialization.Formatters;
 
 public class Player
@@ -35,12 +36,25 @@ public class Player
 
     public Vector2 SpawnPoint;
     public Vector2 VisualPosition;
-    public Player(Vector2 startPos, Texture2D tex)
+
+    //Animation
+    public enum PlayerState { Idle, Running, Jumping, DoubleJumping, Hurt, Die }
+    private PlayerState currentState = PlayerState.Idle;
+    private Dictionary<PlayerState, Animation> animations;
+    private Animation currentAnimation;
+
+    private int currentFrame = 0;
+    private int frameDelay = 6;
+    private int frameCounter = 0;
+    private bool facingRight = true;
+    public Player(Vector2 startPos, Dictionary<PlayerState, Animation> anims)
     {
         Position = startPos;
-        texture = tex;
         SpawnPoint = startPos;
         VisualPosition = startPos;
+
+        animations = anims;
+        currentAnimation = animations[PlayerState.Idle];
     }
 
     public void Heal(int amount)
@@ -78,6 +92,47 @@ public class Player
 
     public void Update(List<Platform> platforms, List<Box> boxes)
     {
+        // --- 1. เช็คทิศทางการหันหน้า ---
+        if (Velocity.X > 0) facingRight = true;
+        else if (Velocity.X < 0) facingRight = false;
+
+        // --- 2. ตัดสินใจว่าตอนนี้อยู่ State ไหน ---
+        PlayerState newState = PlayerState.Idle;
+
+        if (IsDead) newState = PlayerState.Die;
+        else if (stunTimer > 0) newState = PlayerState.Hurt;
+        else if (!isGrounded)
+        {
+            if (isDoubleJump) newState = PlayerState.DoubleJumping;
+            else newState = PlayerState.Jumping;
+        }
+        else if (Velocity.X != 0) newState = PlayerState.Running;
+        else newState = PlayerState.Idle;
+
+        // --- 3. เปลี่ยนแอนิเมชันถ้าระบบสั่งเปลี่ยน State ---
+        if (newState != currentState)
+        {
+            currentState = newState;
+            currentAnimation = animations[currentState];
+            currentFrame = 0; // เริ่มเล่นเฟรมแรกใหม่
+            frameCounter = 0;
+        }
+
+        // --- 4. รันเฟรมแอนิเมชัน ---
+        frameCounter++;
+        if (frameCounter >= frameDelay)
+        {
+            frameCounter = 0;
+            currentFrame++;
+
+            if (currentFrame >= currentAnimation.FrameCount)
+            {
+                if (currentAnimation.IsLooping)
+                    currentFrame = 0; // วนกลับไปเฟรมแรก
+                else
+                    currentFrame = currentAnimation.FrameCount - 1; // ค้างที่เฟรมสุดท้าย (ใช้กับท่าตาย)
+            }
+        }
         // 1. เช็คระยะเวลาอมตะ
         if (invincibilityTimer > 0)
         {
@@ -255,7 +310,21 @@ public class Player
         {
             drawColor = Color.Red * 0.5f;
         }
-        Rectangle drawRect = new Rectangle((int)VisualPosition.X, (int)VisualPosition.Y, 32, 32);
-        spriteBatch.Draw(texture, drawRect, drawColor);
+
+        float scale = 1.5f;
+        int drawWidth = (int)(currentAnimation.FrameWidth * scale);
+        int drawHeight = (int)(currentAnimation.FrameHeight * scale);
+        //หากรอบตัดภาพ Sprite
+        Rectangle sourceRect = new Rectangle(currentFrame * currentAnimation.FrameWidth, 0, currentAnimation.FrameWidth, currentAnimation.FrameHeight);
+        // หาตำแหน่งวาด (ปรับ Offset ให้อยู่ตรงกลาง Hitbox นิดหน่อย)
+        Rectangle drawRect = new Rectangle(
+            (int)VisualPosition.X + (Hitbox.Width / 2) - (drawWidth / 2),
+            (int)VisualPosition.Y + Hitbox.Height - drawHeight,
+            drawWidth,
+            drawHeight);
+
+        // ถ้าหันซ้าย ให้พลิกภาพ
+        SpriteEffects flipEffect = facingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
+        spriteBatch.Draw(currentAnimation.Texture, drawRect, sourceRect, drawColor, 0f, Vector2.Zero, flipEffect, 0f);
     }
 }
