@@ -16,6 +16,7 @@ public class Game1 : Game
     private KeyboardState previousKey;
     private Texture2D dummyTexture; // ไว้สร้างภาพกล่องสี่เหลี่ยมสีขาวชั่วคราว
     private Camera camera;
+    private List<Box> boxes;
 
     public Game1()
     {
@@ -41,7 +42,7 @@ public class Game1 : Game
         "....P...............S...................111.......",
         "..................2222..........2222..............",
         "00000000...22222.........1111.................1111",
-        "00000000...........SSS............SSSS............",
+        "00000000.....B.2...SSS............SSSS............",
         "00000000000000000000000000000000000000000000000000"
     };
 
@@ -72,6 +73,10 @@ public class Game1 : Game
                 {
                     player = new Player(new Vector2(x * tileSize, y * tileSize), dummyTexture);
                 }
+                else if (tile == 'B') // <-- Add this block
+                {
+                    boxes.Add(new Box(new Vector2(x * tileSize, y * tileSize), dummyTexture));
+                }
             }
         }
     }
@@ -81,6 +86,7 @@ public class Game1 : Game
         currentTime = TimeState.Present;
         platforms = new List<Platform>();
         spikes = new List<Spike>();
+        boxes = new List<Box>(); // <-- Add this
         camera = new Camera();
         base.Initialize();
     }
@@ -121,19 +127,22 @@ public class Game1 : Game
         }
 
         // อัปเดตสถานะของแพลตฟอร์มตามเวลาปัจจุบัน
-        foreach (var platform in platforms)
-        {
-            platform.Update(currentTime);
-        }
+// Inside Update():
+        foreach (var platform in platforms) platform.Update(currentTime);
+        foreach (var spike in spikes) spike.Update(currentTime);
 
-        foreach (var spike in spikes)
+
+        // Give the box a reference to the player so it can push them if needed!
+        foreach (var box in boxes) 
         {
-            spike.Update(currentTime);
+            box.Update(platforms, player); 
         }
 
         // อัปเดตตัวละคร
-        player.Update(platforms);
+        player.Update(platforms, boxes);
         player.CheckSpikeCollision(spikes);
+
+
 
         previousKey = currentKey;
         camera.Follow(player, GraphicsDevice);
@@ -148,15 +157,9 @@ public class Game1 : Game
         _spriteBatch.Begin(transformMatrix: camera.Transform);
 
         // วาดแพลตฟอร์ม
-        foreach (var platform in platforms)
-        {
-            platform.Draw(_spriteBatch);
-        }
-
-        foreach (var spike in spikes)
-        {
-            spike.Draw(_spriteBatch);
-        }
+        foreach (var platform in platforms) platform.Draw(_spriteBatch);
+        foreach (var spike in spikes) spike.Draw(_spriteBatch);
+        foreach (var box in boxes) box.Draw(_spriteBatch); // <-- Add this
 
         // วาดตัวละคร
         player.Draw(_spriteBatch);
