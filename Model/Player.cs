@@ -48,7 +48,7 @@ public class Player
     public Vector2 VisualPosition;
 
     //Animation
-    public enum PlayerState { Idle, Running, Jumping, DoubleJumping, Hurt, Die, Dashing }
+    public enum PlayerState { Idle, Running, Jumping, Falling, DoubleJumping, WallClinging, Hurt, Die, Dashing }
     private PlayerState currentState = PlayerState.Idle;
     private Dictionary<PlayerState, Animation> animations;
     private Animation currentAnimation;
@@ -264,16 +264,18 @@ public class Player
 
             if (IsDead) newState = PlayerState.Die;
             else if (stunTimer > 0) newState = PlayerState.Hurt;
-            else if (isDashing) newState = PlayerState.Dashing;
-            else if (isWallSliding) newState = PlayerState.Jumping; // ค้างท่ากระโดดรูปแรก
+            else if (isDashing) newState = PlayerState.Running;
+            else if (isWallSliding) newState = PlayerState.WallClinging;
             else if (!isGrounded)
             {
                 if (isDoubleJump) newState = PlayerState.DoubleJumping;
-                else newState = PlayerState.Jumping;
+                else if (Velocity.Y > 0) newState = PlayerState.Falling; 
+                else newState = PlayerState.Jumping;                     
             }
-            else if (Velocity.X != 0) newState = PlayerState.Running;
-            else newState = PlayerState.Idle;
-
+            else if (Velocity.X != 0)
+                newState = PlayerState.Running; 
+            else
+                newState = PlayerState.Idle;    
             if (newState != currentState)
             {
                 currentState = newState;
@@ -282,23 +284,16 @@ public class Player
                 frameCounter = 0;
             }
 
-            if (isWallSliding)
+            frameCounter++;
+            if (frameCounter >= frameDelay)
             {
-                currentFrame = 0; // แช่เฟรม
-            }
-            else
-            {
-                frameCounter++;
-                if (frameCounter >= frameDelay)
-                {
-                    frameCounter = 0;
-                    currentFrame++;
+                frameCounter = 0;
+                currentFrame++;
 
-                    if (currentFrame >= currentAnimation.FrameCount)
-                    {
-                        if (currentAnimation.IsLooping) currentFrame = 0;
-                        else currentFrame = currentAnimation.FrameCount - 1;
-                    }
+                if (currentFrame >= currentAnimation.FrameCount)
+                {
+                    if (currentAnimation.IsLooping) currentFrame = 0;
+                    else currentFrame = currentAnimation.FrameCount - 1;
                 }
             }
 
@@ -405,7 +400,7 @@ public class Player
         // หาตำแหน่งวาด (ปรับ Offset ให้อยู่ตรงกลาง Hitbox นิดหน่อย)
         Rectangle drawRect = new Rectangle(
             (int)VisualPosition.X + (Hitbox.Width / 2) - (drawWidth / 2),
-            (int)VisualPosition.Y + Hitbox.Height - drawHeight,
+            (int)VisualPosition.Y + Hitbox.Height - drawHeight + 8,
             drawWidth,
             drawHeight);
 

@@ -45,13 +45,14 @@ namespace FinalProject.Managers
 
             playerAnimations = new Dictionary<Player.PlayerState, Animation>()
             {
-                { Player.PlayerState.Idle, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_idle"), 4) },
-                { Player.PlayerState.Running, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_run"), 6) },
-                { Player.PlayerState.Jumping, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_jump"), 4) },
-                { Player.PlayerState.DoubleJumping, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_doublejump"), 6) },
-                { Player.PlayerState.Hurt, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_hurt"), 2) },
-                { Player.PlayerState.Die, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_death"), 6, false)},
-                { Player.PlayerState.Dashing, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_run"), 6) }
+                { Player.PlayerState.Idle, new Animation(content.Load<Texture2D>("PlayerModel/Idle"), 11) },
+                { Player.PlayerState.Running, new Animation(content.Load<Texture2D>("PlayerModel/Run"), 12) },
+                { Player.PlayerState.Jumping, new Animation(content.Load<Texture2D>("PlayerModel/Jump"), 1) },
+                { Player.PlayerState.Falling, new Animation(content.Load<Texture2D>("PlayerModel/Fall"), 1) },
+                { Player.PlayerState.DoubleJumping, new Animation(content.Load<Texture2D>("PlayerModel/Double_Jump"), 6) },
+                { Player.PlayerState.WallClinging, new Animation(content.Load<Texture2D>("PlayerModel/Wall_Jump"), 5) },
+                { Player.PlayerState.Hurt, new Animation(content.Load<Texture2D>("PlayerModel/Hit"), 7, false) },
+                { Player.PlayerState.Die, new Animation(content.Load<Texture2D>("PlayerModel/Hit"), 7, false)},
             };
 
             itemManager = new ItemManager(heartTex);
@@ -153,12 +154,22 @@ namespace FinalProject.Managers
                 case 2:
                     return new string[]
                     {
-                "0000000000000000000000000000000000000000",
-                "0P....................................D0",
-                "000000..............................0000",
-                "0....0.............................0..0",
-                "0SSSS0SSS.SSSSSSSSSSSSSSSSSSSSSSSSSSS0SS0",
-                "0000000000000000000000000000000000000000"
+                    "0000000000000000000000000000000000000000",
+                    "0......................................0",
+                    "0...............................D......0",
+                    "0.............................0000.....0",
+                    "0.......00000S........S0000...0000.....0",
+                    "0.......00000..........0000...0........0",
+                    "0.......00000..........0000S..0........0",
+                    "0.......S0000..........0000...0........0",
+                    "0........0000..........0000...0........0",
+                    "0........0000...0000...0000...0........0",
+                    "0........S000...S00S...000S...0........0",
+                    "0........0000..........0000...0........0",
+                    "0P.......0000..........0000...0........0",
+                    "0000.....S000..........0000S..0........0",
+                    "0000SSSSSS000SSSSSSSSSSS000SSSSSSSSSSSS0",
+                    "0000000000000000000000000000000000000000"
                 };
                 default:
                     return new string[] { "00P0000D00" };
@@ -187,7 +198,17 @@ namespace FinalProject.Managers
                     if (tile == '0') platforms.Add(new Platform(rect, TimeState.Permanent, dummyTexture));
                     else if (tile == '1') platforms.Add(new Platform(rect, TimeState.Present, dummyTexture));
                     else if (tile == '2') platforms.Add(new Platform(rect, TimeState.Past, dummyTexture));
-                    else if (tile == 'S') spikes.Add(new Spike(rect, TimeState.Present, dummyTexture));
+                    // else if (tile == 'S') spikes.Add(new Spike(rect, TimeState.Present, dummyTexture));
+                    else if (tile == 'S')
+                    {
+                        Rectangle smallerHitbox = new Rectangle(
+                            x * tileSize + 8,  // ขยับแกน X เข้ามา 8 พิกเซล
+                            y * tileSize + 8,  // ขยับแกน Y เข้ามา 8 พิกเซล
+                            tileSize - 16,     // ลดความกว้างลง 16 พิกเซล
+                            tileSize - 16      // ลดความสูงลง 16 พิกเซล
+                        );
+                        spikes.Add(new Spike(smallerHitbox, TimeState.Permanent, dummyTexture));
+                    }
                     else if (tile == 'P') player = new Player(new Vector2(x * tileSize, y * tileSize), playerAnimations);
                     else if (tile == 'B') boxes.Add(new Box(new Vector2(x * tileSize, y * tileSize), dummyTexture));
                     // else if (tile == 'E') enemies.Add(new Enemy(new Vector2(x * tileSize, y * tileSize), dummyTexture));
