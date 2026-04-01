@@ -21,9 +21,7 @@ public class Player
     private float gravity = 0.5f;
     private float jumpForce = -12f;
     private float wallJumpForce = 6f;
-
     private bool isGrounded;
-
     private int wallJumpTimer = 0;     // ตัวนับเวลาพุ่ง
     private float wallSlideWall = 2f;
     private int wallJumpLockTime = 12; // ระยะเวลาล็อคปุ่ม (12 เฟรม = ประมาณ 0.2 วินาที)
@@ -40,8 +38,13 @@ public class Player
     private bool isTouchingLeftWall;
     private bool isTouchingRightWall;
     public bool isDoubleJump = false;
-    public bool hasWallJump = true;
     public bool IsDead = false;
+
+
+    //check has power up
+    public bool CanDoubleJump = false;
+    public bool CanDash = false;
+    public bool CanWallJump = false;
     private Texture2D texture;
 
     public Vector2 SpawnPoint;
@@ -149,7 +152,7 @@ public class Player
             // ==========================================
             // 2. รับ Input แกน X และ Dash
             // ==========================================
-            if (InputManager.IsKeyPressed(Keys.LeftShift) && dashCooldownTimer <= 0 && stunTimer <= 0)
+            if (InputManager.IsKeyPressed(Keys.LeftShift) && dashCooldownTimer <= 0 && stunTimer <= 0 && CanDash)
             {
                 isDashing = true;
                 dashTimer = dashDuration;
@@ -218,7 +221,7 @@ public class Player
                 }
             }
 
-            bool isWallSliding = hasWallJump && (isTouchingLeftWall || isTouchingRightWall) && Velocity.Y > 0 && !isDashing;
+            bool isWallSliding = CanWallJump && (isTouchingLeftWall || isTouchingRightWall) && Velocity.Y > 0 && !isDashing;
 
 
             // ==========================================
@@ -229,7 +232,7 @@ public class Player
             {
                 if (isGrounded)
                     Velocity.Y = jumpForce;
-                else if (hasWallJump && isTouchingLeftWall)
+                else if (CanWallJump && isTouchingLeftWall)
                 {
                     Velocity.Y = jumpForce;
                     wallJumpTimer = wallJumpLockTime;
@@ -237,7 +240,7 @@ public class Player
                     Velocity.X = wallJumpForce;
                     isWallSliding = false;
                 }
-                else if (hasWallJump && isTouchingRightWall)
+                else if (CanWallJump && isTouchingRightWall)
                 {
                     Velocity.Y = jumpForce;
                     wallJumpTimer = wallJumpLockTime;
@@ -245,7 +248,7 @@ public class Player
                     Velocity.X = -wallJumpForce;
                     isWallSliding = false;
                 }
-                else if (!isGrounded && !isDoubleJump)
+                else if (CanDoubleJump && !isGrounded && !isDoubleJump)
                 {
                     Velocity.Y = jumpForce;
                     isDoubleJump = true;

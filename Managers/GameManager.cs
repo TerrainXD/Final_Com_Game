@@ -21,6 +21,11 @@ namespace FinalProject.Managers
         private Texture2D terrainTexture;
         private Texture2D spikesTexture;
         private Texture2D heartTexture;
+        private Texture2D doubleJumpTexture;
+        private Texture2D dashTexture;
+        private Texture2D wallJumpTexture;
+        private Texture2D boxTexture;
+
 
         private Texture2D bgBrown;
         private Texture2D bgGray;
@@ -56,9 +61,12 @@ namespace FinalProject.Managers
             SpriteFont font = content.Load<SpriteFont>("GameFont");
             terrainTexture = content.Load<Texture2D>("Terrain/Terrain");
             spikesTexture = content.Load<Texture2D>("Spike/Idle");
-
             bgBrown = content.Load<Texture2D>("Terrain/Brown");
             bgGray = content.Load<Texture2D>("Terrain/Gray");
+            doubleJumpTexture = content.Load<Texture2D>("Item/wing");
+            dashTexture = content.Load<Texture2D>("Item/Veil");
+            wallJumpTexture = content.Load<Texture2D>("Item/shoe");
+            boxTexture = content.Load<Texture2D>("Item/Box");
 
 
             playerAnimations = new Dictionary<Player.PlayerState, Animation>()
@@ -76,6 +84,9 @@ namespace FinalProject.Managers
             itemManager = new ItemManager(heartTex);
             uiManager = new UIManager(font, heartTex);
             particleManager = new ParticleManager();
+            itemManager.powerUpTextures[ItemManager.ItemType.DoubleJump] = doubleJumpTexture;
+            itemManager.powerUpTextures[ItemManager.ItemType.Dash] = dashTexture;
+            itemManager.powerUpTextures[ItemManager.ItemType.WallJump] = wallJumpTexture;
             LoadLevel();
         }
 
@@ -215,7 +226,7 @@ namespace FinalProject.Managers
                         "8.....................{444}............8",
                         "8.....................{444}............8",
                         "8...............[1]...{444}............8",
-                        "8P..............{4}...{444}............8",
+                        "8P...B..........{4}...{444}............8",
                         "0000............{4}...{444}............8",
                         "8888000.........{4}...{444}............8",
                         "888888800.......{4}...{444}....000000008",
@@ -323,7 +334,7 @@ namespace FinalProject.Managers
                         else if (tile == 't') spikes.Add(new Spike(spikeHitbox, drawRect, TimeState.Past, spikesTexture));
                     }
                     else if (tile == 'P') player = new Player(new Vector2(x * tileSize, y * tileSize), playerAnimations);
-                    else if (tile == 'B') boxes.Add(new Box(new Vector2(x * tileSize, y * tileSize), dummyTexture));
+                    else if (tile == 'B') boxes.Add(new Box(new Vector2(x * tileSize, y * tileSize), boxTexture));
                     else if (tile == 'E')
                     {
                         Vector2 enemyPos = new Vector2(x * tileSize, (y * tileSize) + 32);
@@ -342,17 +353,23 @@ namespace FinalProject.Managers
                         hazards.Add(ceilingHazard);
                     }
                     else if (tile == 'T') plates.Add(new PressurePlate(rect, dummyTexture, 1));
-                    else if (tile == 'H') itemManager.AddHeart(rect);
                     else if (tile == 'D')
                     {
                         exitDoor = rect;
                         hasExitDoor = true;
                     }
+                    else if (tile == 'D') itemManager.AddPowerUp(rect, ItemManager.ItemType.DoubleJump);
+                    else if (tile == 'A') itemManager.AddPowerUp(rect, ItemManager.ItemType.Dash);
+                    else if (tile == 'J') itemManager.AddPowerUp(rect, ItemManager.ItemType.WallJump);
                 }
             }
         }
         private void LoadLevel()
         {
+            bool savedDJ = (player != null) ? player.CanDoubleJump : false;
+            bool savedDash = (player != null) ? player.CanDash : false;
+            bool savedWJ = (player != null) ? player.CanWallJump : false;
+
             // 1. ล้างข้อมูลเก่าทิ้ง
             platforms.Clear();
             spikes.Clear();
@@ -368,6 +385,10 @@ namespace FinalProject.Managers
             // 3. สั่งโหลดแผนที่ทีละชั้นให้มันซ้อนกัน!
             LoadLayer(maps.presentMap, tileSize);
             LoadLayer(maps.pastMap, tileSize);
+
+            player.CanDoubleJump = savedDJ;
+            player.CanDash = savedDash;
+            player.CanWallJump = savedWJ;
         }
     }
 }
