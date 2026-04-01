@@ -12,29 +12,39 @@ public enum TimeState
 
 public class Platform
 {
-    public Rectangle Hitbox;
     public TimeState ActiveTime;
-    public bool IsSolid;
     public int RequiredPlateID = -1;
     private Texture2D texture;
+    public Rectangle Hitbox { get; private set; }
+    public TimeState PlatformTimeState { get; private set; }
 
-    public Platform(Rectangle hitbox, TimeState activeTime, Texture2D tex, int plateID = -1)
+    public bool IsSolid { get; private set; }
+    public bool IsVisible { get; private set; } // ✨ เพิ่มตัวแปรเช็คการมองเห็น
+
+    private Rectangle sorceRect;
+
+    public Platform(Rectangle hitbox, TimeState activeTime, Texture2D tex, Rectangle srcRect, int plateID = -1)
     {
         Hitbox = hitbox;
-        ActiveTime = activeTime;
+        PlatformTimeState = activeTime;
         texture = tex;
         RequiredPlateID = plateID;
+        sorceRect = srcRect;
     }
 
     public void Update(TimeState currentTime, List<PressurePlate> plates)
     {
-        if (ActiveTime == TimeState.Permanent)
+        // ✨ ถ้าเป็นบล็อกถาวร หรือเป็นบล็อกตรงกับมิติเวลาปัจจุบัน
+        if (PlatformTimeState == TimeState.Permanent || PlatformTimeState == currentTime)
         {
-            IsSolid = true;
+            IsSolid = true;     // ชนได้ เหยียบได้
+            IsVisible = true;   // มองเห็นได้
         }
         else
         {
-            IsSolid = (currentTime == ActiveTime);
+            // ✨ ถ้าอยู่คนละมิติเวลา
+            IsSolid = false;    // ทะลุผ่านเลย
+            IsVisible = false;  // หายวับไปจากหน้าจอ!
         }
 
         // 2. Check Pressure Plate Logic (ID System)
@@ -42,7 +52,7 @@ public class Platform
         {
             // Find the plate that matches this platform's ID
             var linkedPlate = plates.Find(p => p.PlateID == RequiredPlateID);
-            
+
             // If the plate exists and is NOT pressed, the platform stays non-solid
             if (linkedPlate != null && !linkedPlate.IsPressed)
             {
@@ -53,20 +63,17 @@ public class Platform
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        if (IsSolid)
+        if (IsVisible)
         {
-            spriteBatch.Draw(texture, Hitbox, Color.White); // สีเข้ม เหยียบได้
+            spriteBatch.Draw(texture, Hitbox, sorceRect, Color.White);
         }
         else
+        {
+            if (RequiredPlateID != -1)
             {
-                if (RequiredPlateID != -1)
-                {
-                    spriteBatch.Draw(texture, Hitbox, Color.White * 0.3f);
-                }
-                else
-                {
-                    spriteBatch.Draw(texture, Hitbox, Color.White * 0.5f); // สีจาง เหยียบไม่ได้
-                }
+                spriteBatch.Draw(texture, Hitbox, sorceRect, Color.White * 0.3f);
             }
+
+        }
     }
 }

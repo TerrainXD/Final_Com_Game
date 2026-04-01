@@ -137,7 +137,7 @@ public class Player
             // ==========================================
             // 1. จัดการ Timer (Dash, อมตะ, สตัน)
             // ==========================================
-        if (dashCooldownTimer > 0) dashCooldownTimer--;
+            if (dashCooldownTimer > 0) dashCooldownTimer--;
             if (invincibilityTimer > 0)
             {
                 invincibilityTimer--;
@@ -295,13 +295,13 @@ public class Player
             else if (!isGrounded)
             {
                 if (isDoubleJump) newState = PlayerState.DoubleJumping;
-                else if (Velocity.Y > 0) newState = PlayerState.Falling; 
-                else newState = PlayerState.Jumping;                     
+                else if (Velocity.Y > 0) newState = PlayerState.Falling;
+                else newState = PlayerState.Jumping;
             }
             else if (Velocity.X != 0)
-                newState = PlayerState.Running; 
+                newState = PlayerState.Running;
             else
-                newState = PlayerState.Idle;    
+                newState = PlayerState.Idle;
             if (newState != currentState)
             {
                 currentState = newState;
@@ -426,7 +426,7 @@ public class Player
         // หาตำแหน่งวาด (ปรับ Offset ให้อยู่ตรงกลาง Hitbox นิดหน่อย)
         Rectangle drawRect = new Rectangle(
             (int)VisualPosition.X + (Hitbox.Width / 2) - (drawWidth / 2),
-            (int)VisualPosition.Y + Hitbox.Height - drawHeight + 8,
+            (int)VisualPosition.Y + Hitbox.Height - drawHeight,
             drawWidth,
             drawHeight);
 
