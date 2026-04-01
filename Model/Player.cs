@@ -125,8 +125,9 @@ public class Player
             }
         }
     }
-    public void Update(List<Platform> platforms, List<Box> boxes)
+    public void Update(List<Platform> platforms, List<Box> boxes, ParticleManager particleManager)
     {
+        PushOutHorizontally(platforms);
         if (IsDead)
         {
             Velocity = Vector2.Zero;
@@ -136,7 +137,6 @@ public class Player
             // ==========================================
             // 1. จัดการ Timer (Dash, อมตะ, สตัน)
             // ==========================================
-            PushOutHorizontally(platforms);
         if (dashCooldownTimer > 0) dashCooldownTimer--;
             if (invincibilityTimer > 0)
             {
