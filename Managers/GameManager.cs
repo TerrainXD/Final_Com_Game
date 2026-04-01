@@ -47,8 +47,8 @@ namespace FinalProject.Managers
                 { Player.PlayerState.Jumping, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_jump"), 4) },
                 { Player.PlayerState.DoubleJumping, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_doublejump"), 6) },
                 { Player.PlayerState.Hurt, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_hurt"), 2) },
-                { Player.PlayerState.Die, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_death"), 6, false)}
-
+                { Player.PlayerState.Die, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_death"), 6, false)},
+                { Player.PlayerState.Dashing, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_run"), 6) }
             };
 
             itemManager = new ItemManager(heartTex);

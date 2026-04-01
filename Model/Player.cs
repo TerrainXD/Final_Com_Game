@@ -27,6 +27,15 @@ public class Player
     private float wallSlideWall = 2f;
     private int wallJumpLockTime = 12; // ระยะเวลาล็อคปุ่ม (12 เฟรม = ประมาณ 0.2 วินาที)
     private float forcedDirection = 0f;// ทิศทางที่ถูกบังคับพุ่ง (ซ้ายหรือขวา)
+
+    // --- Dash Variables ---
+    private float dashSpeed = 25f;
+    private int dashDuration = 10;
+    private int dashCooldown = 40;
+    private int dashTimer = 0;
+    private int dashCooldownTimer = 0;
+    public bool isDashing = false;
+    private float dashDirection = 0f;
     private bool isTouchingLeftWall;
     private bool isTouchingRightWall;
     public bool isDoubleJump = false;
@@ -38,7 +47,7 @@ public class Player
     public Vector2 VisualPosition;
 
     //Animation
-    public enum PlayerState { Idle, Running, Jumping, DoubleJumping, Hurt, Die }
+    public enum PlayerState { Idle, Running, Jumping, DoubleJumping, Hurt, Die, Dashing }
     private PlayerState currentState = PlayerState.Idle;
     private Dictionary<PlayerState, Animation> animations;
     private Animation currentAnimation;
@@ -92,6 +101,16 @@ public class Player
 
     public void Update(List<Platform> platforms, List<Box> boxes)
     {
+        if (dashCooldownTimer > 0) dashCooldownTimer--;
+        if (InputManager.IsKeyPressed(Keys.LeftControl) && dashCooldownTimer <= 0 && stunTimer <= 0)
+        {
+            isDashing = true;
+            dashTimer = dashDuration;
+            dashCooldownTimer = dashCooldown;
+            dashDirection = facingRight ? 1f : -1f;
+            isInvincible = true;
+            invincibilityTimer = dashDuration; 
+        }
         // --- 1. เช็คทิศทางการหันหน้า ---
         if (Velocity.X > 0) facingRight = true;
         else if (Velocity.X < 0) facingRight = false;
@@ -101,6 +120,7 @@ public class Player
 
         if (IsDead) newState = PlayerState.Die;
         else if (stunTimer > 0) newState = PlayerState.Hurt;
+        else if (isDashing) newState = PlayerState.Dashing;
         else if (!isGrounded)
         {
             if (isDoubleJump) newState = PlayerState.DoubleJumping;
@@ -144,6 +164,13 @@ public class Player
         {
             stunTimer--;
             // ตอนติด Stun กระเด็น ห้ามเปลี่ยนค่า Velocity.X ปล่อยให้มันลอยไปตามแรงกระแทก
+        }
+        else if (isDashing)
+        {
+            Velocity.X = dashDirection * dashSpeed;
+            Velocity.Y = 0; // Freeze gravity during dash
+            dashTimer--;
+            if (dashTimer <= 0) isDashing = false;
         }
         else if (wallJumpTimer > 0)
         {
@@ -215,15 +242,31 @@ public class Player
         }
 
         // 5. แรงโน้มถ่วง และ การไถลกำแพง
-        if (hasWallJump && (isTouchingLeftWall || isTouchingRightWall) && Velocity.Y > 0)
+        // if (hasWallJump && (isTouchingLeftWall || isTouchingRightWall) && Velocity.Y > 0)
+        // {
+        //     Velocity.Y = wallSlideWall;
+        // }
+        // else
+        // {
+        //     Velocity.Y += gravity;
+        // }
+        if (!isDashing)
         {
-            Velocity.Y = wallSlideWall;
-        }
-        else
-        {
-            Velocity.Y += gravity;
+            if (hasWallJump && (isTouchingLeftWall || isTouchingRightWall) && Velocity.Y > 0)
+            {
+                Velocity.Y = wallSlideWall;
+            }
+            else
+            {
+                Velocity.Y += gravity;
+            }
         }
 
+        if (!isDashing)
+                {
+                    if (Velocity.X > 0) facingRight = true;
+                    else if (Velocity.X < 0) facingRight = false;
+                }
         // 6. เช็คการชน
         Position.X += Velocity.X;
         CheckCollision(platforms, boxes, true);
