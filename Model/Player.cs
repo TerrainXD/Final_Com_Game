@@ -20,9 +20,10 @@ public class Player
     private int stunTimer = 0;
     private float gravity = 0.5f;
     private float jumpForce = -12f;
+    private float wallJumpForce = 6f;
+
     private bool isGrounded;
 
-    private float wallJumpForce = 5f;  // ความแรงในการพุ่งออกข้าง (ปรับให้เยอะกว่า speed ปกติได้)
     private int wallJumpTimer = 0;     // ตัวนับเวลาพุ่ง
     private float wallSlideWall = 2f;
     private int wallJumpLockTime = 12; // ระยะเวลาล็อคปุ่ม (12 เฟรม = ประมาณ 0.2 วินาที)
@@ -99,185 +100,227 @@ public class Player
         IsDead = true;
     }
 
-    public void Update(List<Platform> platforms, List<Box> boxes)
+    public void Update(List<Platform> platforms, List<Box> boxes, ParticleManager particleManager)
     {
-        if (dashCooldownTimer > 0) dashCooldownTimer--;
-        if (InputManager.IsKeyPressed(Keys.LeftControl) && dashCooldownTimer <= 0 && stunTimer <= 0)
+        if (IsDead)
         {
-            isDashing = true;
-            dashTimer = dashDuration;
-            dashCooldownTimer = dashCooldown;
-            dashDirection = facingRight ? 1f : -1f;
-            isInvincible = true;
-            invincibilityTimer = dashDuration; 
+            Velocity = Vector2.Zero;
+            return;
         }
-        // --- 1. เช็คทิศทางการหันหน้า ---
-        if (Velocity.X > 0) facingRight = true;
-        else if (Velocity.X < 0) facingRight = false;
-
-        // --- 2. ตัดสินใจว่าตอนนี้อยู่ State ไหน ---
-        PlayerState newState = PlayerState.Idle;
-
-        if (IsDead) newState = PlayerState.Die;
-        else if (stunTimer > 0) newState = PlayerState.Hurt;
-        else if (isDashing) newState = PlayerState.Dashing;
-        else if (!isGrounded)
         {
-            if (isDoubleJump) newState = PlayerState.DoubleJumping;
-            else newState = PlayerState.Jumping;
-        }
-        else if (Velocity.X != 0) newState = PlayerState.Running;
-        else newState = PlayerState.Idle;
-
-        // --- 3. เปลี่ยนแอนิเมชันถ้าระบบสั่งเปลี่ยน State ---
-        if (newState != currentState)
-        {
-            currentState = newState;
-            currentAnimation = animations[currentState];
-            currentFrame = 0; // เริ่มเล่นเฟรมแรกใหม่
-            frameCounter = 0;
-        }
-
-        // --- 4. รันเฟรมแอนิเมชัน ---
-        frameCounter++;
-        if (frameCounter >= frameDelay)
-        {
-            frameCounter = 0;
-            currentFrame++;
-
-            if (currentFrame >= currentAnimation.FrameCount)
+            // ==========================================
+            // 1. จัดการ Timer (Dash, อมตะ, สตัน)
+            // ==========================================
+            if (dashCooldownTimer > 0) dashCooldownTimer--;
+            if (invincibilityTimer > 0)
             {
-                if (currentAnimation.IsLooping)
-                    currentFrame = 0; // วนกลับไปเฟรมแรก
+                invincibilityTimer--;
+                if (invincibilityTimer <= 0) isInvincible = false;
+            }
+            if (stunTimer > 0) stunTimer--;
+
+
+            // ==========================================
+            // 2. รับ Input แกน X และ Dash
+            // ==========================================
+            if (InputManager.IsKeyPressed(Keys.LeftControl) && dashCooldownTimer <= 0 && stunTimer <= 0)
+            {
+                isDashing = true;
+                dashTimer = dashDuration;
+                dashCooldownTimer = dashCooldown;
+                dashDirection = facingRight ? 1f : -1f;
+            }
+
+            if (stunTimer <= 0 && !isDashing)
+            {
+                if (wallJumpTimer > 0)
+                {
+                    Velocity.X = forcedDirection * wallJumpForce;
+                    wallJumpTimer--;
+                }
                 else
-                    currentFrame = currentAnimation.FrameCount - 1; // ค้างที่เฟรมสุดท้าย (ใช้กับท่าตาย)
+                {
+                    Velocity.X = 0;
+                    if (InputManager.IsKeyDown(Keys.A) || InputManager.IsKeyDown(Keys.Left)) Velocity.X = -speed;
+                    if (InputManager.IsKeyDown(Keys.D) || InputManager.IsKeyDown(Keys.Right)) Velocity.X = speed;
+                }
             }
-        }
-        // 1. เช็คระยะเวลาอมตะ
-        if (invincibilityTimer > 0)
-        {
-            invincibilityTimer--;
-            if (invincibilityTimer <= 0) isInvincible = false;
-        }
-        // 2. ลอจิกการเคลื่อนที่แกน X (จัดลำดับความสำคัญ: Stun -> WallJump -> เดินปกติ)
-        if (stunTimer > 0)
-        {
-            stunTimer--;
-            // ตอนติด Stun กระเด็น ห้ามเปลี่ยนค่า Velocity.X ปล่อยให้มันลอยไปตามแรงกระแทก
-        }
-        else if (isDashing)
-        {
-            Velocity.X = dashDirection * dashSpeed;
-            Velocity.Y = 0; // Freeze gravity during dash
-            dashTimer--;
-            if (dashTimer <= 0) isDashing = false;
-        }
-        else if (wallJumpTimer > 0)
-        {
-            Velocity.X = forcedDirection * wallJumpForce;
-            wallJumpTimer--; // ล็อคปุ่มเดินตามระยะเวลา Wall Jump
-        }
-        else
-        {
-            // เดินปกติ
-            Velocity.X = 0;
-            if (InputManager.IsKeyDown(Keys.A) || InputManager.IsKeyDown(Keys.Left)) Velocity.X = -speed;
-            if (InputManager.IsKeyDown(Keys.D) || InputManager.IsKeyDown(Keys.Right)) Velocity.X = speed;
-        }
-        // 3. เรดาร์เช็คสภาพแวดล้อม
-        Rectangle groundCheck = new Rectangle((int)Position.X, (int)Position.Y + 1, Hitbox.Width, Hitbox.Height);
-        isGrounded = false;
-        Rectangle leftCheck = new Rectangle((int)Position.X - 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
-        isTouchingLeftWall = false;
-        Rectangle rightCheck = new Rectangle((int)Position.X + 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
-        isTouchingRightWall = false;
 
-        foreach (var platform in platforms)
-        {
-            if (platform.IsSolid)
+            if (isDashing)
             {
-                if (groundCheck.Intersects(platform.Hitbox)) isGrounded = true;
-                if (leftCheck.Intersects(platform.Hitbox) && !isGrounded) isTouchingLeftWall = true;
-                if (rightCheck.Intersects(platform.Hitbox) && !isGrounded) isTouchingRightWall = true;
+                Velocity.X = dashDirection * dashSpeed;
+                Velocity.Y = 0;
+                dashTimer--;
+                if (dashTimer <= 0) isDashing = false;
             }
-        }
 
-        foreach (var box in boxes)
-        {
-            if (groundCheck.Intersects(box.Hitbox)) isGrounded = true;
-            if (leftCheck.Intersects(box.Hitbox) && !isGrounded) isTouchingLeftWall = true;
-            if (rightCheck.Intersects(box.Hitbox) && !isGrounded) isTouchingRightWall = true;
-        }
 
-        if (isGrounded)
-            isDoubleJump = false;
+            // ==========================================
+            // 3. เรดาร์เช็คสภาพแวดล้อม (ต้องทำก่อนไปคำนวณแอนิเมชัน)
+            // ==========================================
+            Rectangle groundCheck = new Rectangle((int)Position.X, (int)Position.Y + 1, Hitbox.Width, Hitbox.Height);
+            isGrounded = false;
 
-        // 4. ลอจิกการกระโดด
-        bool justPressedSpace = InputManager.IsKeyPressed(Keys.Space); // ใช้ IsKeyPressed ตัวเดียวพอครับ
+            // เช็คพื้นก่อนเสมอ
+            foreach (var platform in platforms)
+                if (platform.IsSolid && groundCheck.Intersects(platform.Hitbox)) isGrounded = true;
+            foreach (var box in boxes)
+                if (groundCheck.Intersects(box.Hitbox)) isGrounded = true;
 
-        // ถ้าติด Stun อยู่ จะกดกระโดดไม่ได้
-        if (justPressedSpace && stunTimer <= 0)
-        {
-            if (isGrounded)
-                Velocity.Y = jumpForce;
-            else if (hasWallJump && isTouchingLeftWall)
+            if (isGrounded) isDoubleJump = false;
+
+            Rectangle leftCheck = new Rectangle((int)Position.X - 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
+            isTouchingLeftWall = false;
+            Rectangle rightCheck = new Rectangle((int)Position.X + 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
+            isTouchingRightWall = false;
+
+            // ✨ แก้บั๊กสั่น: "จะเกาะกำแพงได้ ต้องลอยอยู่กลางอากาศเท่านั้น" (ไม่เช็คเรดาร์กำแพงถ้าเหยียบพื้นอยู่)
+            if (!isGrounded)
             {
-                Velocity.Y = jumpForce;
-                wallJumpTimer = wallJumpLockTime;
-                forcedDirection = 1f;
-                Velocity.X = speed;
+                foreach (var platform in platforms)
+                {
+                    if (platform.IsSolid)
+                    {
+                        if (leftCheck.Intersects(platform.Hitbox)) isTouchingLeftWall = true;
+                        if (rightCheck.Intersects(platform.Hitbox)) isTouchingRightWall = true;
+                    }
+                }
+                foreach (var box in boxes)
+                {
+                    if (leftCheck.Intersects(box.Hitbox)) isTouchingLeftWall = true;
+                    if (rightCheck.Intersects(box.Hitbox)) isTouchingRightWall = true;
+                }
             }
-            else if (hasWallJump && isTouchingRightWall)
-            {
-                Velocity.Y = jumpForce;
-                wallJumpTimer = wallJumpLockTime;
-                forcedDirection = -1f;
-                Velocity.X = -speed;
-            }
-            else if (!isGrounded && !isDoubleJump)
-            {
-                Velocity.Y = jumpForce;
-                isDoubleJump = true;
-            }
-        }
 
-        // 5. แรงโน้มถ่วง และ การไถลกำแพง
-        // if (hasWallJump && (isTouchingLeftWall || isTouchingRightWall) && Velocity.Y > 0)
-        // {
-        //     Velocity.Y = wallSlideWall;
-        // }
-        // else
-        // {
-        //     Velocity.Y += gravity;
-        // }
-        if (!isDashing)
-        {
-            if (hasWallJump && (isTouchingLeftWall || isTouchingRightWall) && Velocity.Y > 0)
+            bool isWallSliding = hasWallJump && (isTouchingLeftWall || isTouchingRightWall) && Velocity.Y > 0 && !isDashing;
+
+
+            // ==========================================
+            // 4. ลอจิกการกระโดด
+            // ==========================================
+            bool justPressedSpace = InputManager.IsKeyPressed(Keys.Space);
+            if (justPressedSpace && stunTimer <= 0 && !isDashing)
             {
-                Velocity.Y = wallSlideWall;
+                if (isGrounded)
+                    Velocity.Y = jumpForce;
+                else if (hasWallJump && isTouchingLeftWall)
+                {
+                    Velocity.Y = jumpForce;
+                    wallJumpTimer = wallJumpLockTime;
+                    forcedDirection = 1f;
+                    Velocity.X = wallJumpForce;
+                    isWallSliding = false;
+                }
+                else if (hasWallJump && isTouchingRightWall)
+                {
+                    Velocity.Y = jumpForce;
+                    wallJumpTimer = wallJumpLockTime;
+                    forcedDirection = -1f;
+                    Velocity.X = -wallJumpForce;
+                    isWallSliding = false;
+                }
+                else if (!isGrounded && !isDoubleJump)
+                {
+                    Velocity.Y = jumpForce;
+                    isDoubleJump = true;
+                }
+            }
+
+
+            // ==========================================
+            // 5. แรงโน้มถ่วง และ อัปเดตตำแหน่ง + การชน
+            // ==========================================
+            if (!isDashing)
+            {
+                if (isWallSliding) Velocity.Y = wallSlideWall;
+                else Velocity.Y += gravity;
+            }
+
+            Position.X += Velocity.X;
+            CheckCollision(platforms, boxes, true);
+
+            Position.Y += Velocity.Y;
+            CheckCollision(platforms, boxes, false);
+
+            VisualPosition.X = MathHelper.Lerp(VisualPosition.X, Position.X, 0.2f);
+            VisualPosition.Y = MathHelper.Lerp(VisualPosition.Y, Position.Y, 0.2f);
+
+
+            // ==========================================
+            // 6. ระบบแอนิเมชัน (ย้ายมาไว้ล่างสุด เพื่อให้ได้ค่าตำแหน่งล่าสุดเป๊ะๆ)
+            // ==========================================
+            if (isWallSliding)
+            {
+                if (isTouchingLeftWall) facingRight = false;
+                else if (isTouchingRightWall) facingRight = true;
+            }
+            else if (!isDashing && Velocity.X != 0)
+            {
+                if (Velocity.X > 0) facingRight = true;
+                else if (Velocity.X < 0) facingRight = false;
+            }
+
+            PlayerState newState = PlayerState.Idle;
+
+            if (IsDead) newState = PlayerState.Die;
+            else if (stunTimer > 0) newState = PlayerState.Hurt;
+            else if (isDashing) newState = PlayerState.Dashing;
+            else if (isWallSliding) newState = PlayerState.Jumping; // ค้างท่ากระโดดรูปแรก
+            else if (!isGrounded)
+            {
+                if (isDoubleJump) newState = PlayerState.DoubleJumping;
+                else newState = PlayerState.Jumping;
+            }
+            else if (Velocity.X != 0) newState = PlayerState.Running;
+            else newState = PlayerState.Idle;
+
+            if (newState != currentState)
+            {
+                currentState = newState;
+                currentAnimation = animations[currentState];
+                currentFrame = 0;
+                frameCounter = 0;
+            }
+
+            if (isWallSliding)
+            {
+                currentFrame = 0; // แช่เฟรม
             }
             else
             {
-                Velocity.Y += gravity;
+                frameCounter++;
+                if (frameCounter >= frameDelay)
+                {
+                    frameCounter = 0;
+                    currentFrame++;
+
+                    if (currentFrame >= currentAnimation.FrameCount)
+                    {
+                        if (currentAnimation.IsLooping) currentFrame = 0;
+                        else currentFrame = currentAnimation.FrameCount - 1;
+                    }
+                }
+            }
+
+            if (isDashing && dashTimer % 2 == 0)
+            {
+                float Scale = 1.5f;
+                int drawWidth = (int)(currentAnimation.FrameWidth * Scale);
+                int drawHeight = (int)(currentAnimation.FrameHeight * Scale);
+                Rectangle sourceRect = new Rectangle(currentFrame * currentAnimation.FrameWidth, 0, currentAnimation.FrameWidth, currentAnimation.FrameHeight);
+
+                Rectangle drawRect = new Rectangle(
+                    (int)VisualPosition.X + (Hitbox.Width / 2) - (drawWidth / 2),
+                    (int)VisualPosition.Y + Hitbox.Height - drawHeight,
+                    drawWidth,
+                    drawHeight);
+
+                SpriteEffects flipEffect = facingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
+
+                particleManager.AddParticle(new Particle(drawRect, sourceRect, flipEffect, currentAnimation.Texture, Color.Cyan, 0.6f, 0.05f));
             }
         }
-
-        if (!isDashing)
-                {
-                    if (Velocity.X > 0) facingRight = true;
-                    else if (Velocity.X < 0) facingRight = false;
-                }
-        // 6. เช็คการชน
-        Position.X += Velocity.X;
-        CheckCollision(platforms, boxes, true);
-
-        Position.Y += Velocity.Y;
-        CheckCollision(platforms, boxes, false);
-
-        VisualPosition.X = MathHelper.Lerp(VisualPosition.X, Position.X, 0.2f);
-        VisualPosition.Y = MathHelper.Lerp(VisualPosition.Y, Position.Y, 0.2f);
     }
-
     private void CheckCollision(List<Platform> platforms, List<Box> boxes, bool isHorizontal)
     {
         // 1. เช็คการชนกับพื้น/กำแพง (Platform)

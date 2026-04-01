@@ -19,6 +19,7 @@ namespace FinalProject.Managers
         private Texture2D heartTexture;
         public ItemManager itemManager;
         public UIManager uiManager;
+        public ParticleManager particleManager;
         private Dictionary<Player.PlayerState, Animation> playerAnimations;
 
         public int currentLevel = 1;
@@ -55,6 +56,7 @@ namespace FinalProject.Managers
 
             itemManager = new ItemManager(heartTex);
             uiManager = new UIManager(font, heartTex);
+            particleManager = new ParticleManager();
             LoadLevel();
         }
 
@@ -71,18 +73,19 @@ namespace FinalProject.Managers
             foreach (var box in boxes) box.Update(platforms, player);
             foreach (var enemy in enemies) enemy.Update(platforms, boxes);
 
-            player.Update(platforms, boxes);
+            player.Update(platforms, boxes, particleManager);
             player.CheckSpikeCollision(spikes);
             itemManager.Update(player);
+            particleManager.Update();
 
             foreach (var enemy in enemies)
-                    {
-                        if (player.Hitbox.Intersects(enemy.Hitbox))
-                        {
-                            int pushDir = (player.Position.X < enemy.Position.X) ? -1 : 1;
-                            player.TakeDamage(pushDir);
-                        }
-                    }
+            {
+                if (player.Hitbox.Intersects(enemy.Hitbox))
+                {
+                    int pushDir = (player.Position.X < enemy.Position.X) ? -1 : 1;
+                    player.TakeDamage(pushDir);
+                }
+            }
 
             if (player.IsDead)
             {
@@ -118,6 +121,7 @@ namespace FinalProject.Managers
             foreach (var enemy in enemies) enemy.Draw(spriteBatch);
             if (hasExitDoor) spriteBatch.Draw(dummyTexture, exitDoor, Color.Gold);
             itemManager.Draw(spriteBatch);
+            particleManager.Draw(spriteBatch);
             player.Draw(spriteBatch);
         }
 
@@ -187,10 +191,10 @@ namespace FinalProject.Managers
                     else if (tile == 'P') player = new Player(new Vector2(x * tileSize, y * tileSize), playerAnimations);
                     else if (tile == 'B') boxes.Add(new Box(new Vector2(x * tileSize, y * tileSize), dummyTexture));
                     // else if (tile == 'E') enemies.Add(new Enemy(new Vector2(x * tileSize, y * tileSize), dummyTexture));
-                    else if (tile == 'E') 
+                    else if (tile == 'E')
                     {
                         // Offset Y by 32 so the 32px enemy sits at the bottom of the 64px tile space
-                        Vector2 enemyPos = new Vector2(x * tileSize, (y * tileSize) + 32); 
+                        Vector2 enemyPos = new Vector2(x * tileSize, (y * tileSize) + 32);
                         enemies.Add(new Enemy(enemyPos, dummyTexture));
                     }
                     else if (tile == 'H') itemManager.AddHeart(rect);
