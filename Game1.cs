@@ -62,12 +62,12 @@ public class Game1 : Game
         // เปลี่ยนสีพื้นหลังตามกาลเวลาเพื่อบอกผู้เล่น
         GraphicsDevice.Clear(gameManager.currentTime == TimeState.Present ? Color.CornflowerBlue : Color.DarkSlateBlue);
 
-        spriteBatch.Begin(transformMatrix: camera.Transform);
-        gameManager.Draw(spriteBatch);
+        spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+        gameManager.DrawBackground(spriteBatch);
         spriteBatch.End();
 
-        spriteBatch.Begin();
-        gameManager.uiManager.Draw(spriteBatch, gameManager.player, gameManager.currentTime);
+        spriteBatch.Begin(transformMatrix: camera.Transform, samplerState: SamplerState.PointClamp);
+        gameManager.Draw(spriteBatch);
         spriteBatch.End();
 
         base.Draw(gameTime);

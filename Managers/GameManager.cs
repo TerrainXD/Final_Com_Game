@@ -18,7 +18,15 @@ namespace FinalProject.Managers
         public List<Hazard> hazards;
         public TimeState currentTime;
         private Texture2D dummyTexture;
+        private Texture2D terrainTexture;
+        private Texture2D spikesTexture;
         private Texture2D heartTexture;
+
+        private Texture2D bgBrown;
+        private Texture2D bgGray;
+        private float bgScrollX = 0f;
+        private float bgScrollY = 0f;
+
         public ItemManager itemManager;
         public UIManager uiManager;
         public ParticleManager particleManager;
@@ -46,16 +54,23 @@ namespace FinalProject.Managers
             dummyTexture = dummy;
             Texture2D heartTex = content.Load<Texture2D>("Image/Heart");
             SpriteFont font = content.Load<SpriteFont>("GameFont");
+            terrainTexture = content.Load<Texture2D>("Terrain/Terrain");
+            spikesTexture = content.Load<Texture2D>("Spike/Idle");
+
+            bgBrown = content.Load<Texture2D>("Terrain/Brown");
+            bgGray = content.Load<Texture2D>("Terrain/Gray");
+
 
             playerAnimations = new Dictionary<Player.PlayerState, Animation>()
             {
-                { Player.PlayerState.Idle, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_idle"), 4) },
-                { Player.PlayerState.Running, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_run"), 6) },
-                { Player.PlayerState.Jumping, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_jump"), 4) },
-                { Player.PlayerState.DoubleJumping, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_doublejump"), 6) },
-                { Player.PlayerState.Hurt, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_hurt"), 2) },
-                { Player.PlayerState.Die, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_death"), 6, false)},
-                { Player.PlayerState.Dashing, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_run"), 6) }
+                { Player.PlayerState.Idle, new Animation(content.Load<Texture2D>("PlayerModel/Idle"), 11) },
+                { Player.PlayerState.Running, new Animation(content.Load<Texture2D>("PlayerModel/Run"), 12) },
+                { Player.PlayerState.Jumping, new Animation(content.Load<Texture2D>("PlayerModel/Jump"), 1) },
+                { Player.PlayerState.Falling, new Animation(content.Load<Texture2D>("PlayerModel/Fall"), 1) },
+                { Player.PlayerState.DoubleJumping, new Animation(content.Load<Texture2D>("PlayerModel/Double_Jump"), 6) },
+                { Player.PlayerState.WallClinging, new Animation(content.Load<Texture2D>("PlayerModel/Wall_Jump"), 5) },
+                { Player.PlayerState.Hurt, new Animation(content.Load<Texture2D>("PlayerModel/Hit"), 7, false) },
+                { Player.PlayerState.Die, new Animation(content.Load<Texture2D>("PlayerModel/Hit"), 7, false)},
             };
 
             itemManager = new ItemManager(heartTex);
@@ -66,13 +81,15 @@ namespace FinalProject.Managers
 
         public void Update(GameTime gameTime)
         {
+            bgScrollX = 0f;
+            bgScrollY += 0.5f;
             // สลับเวลาผ่าน InputManager
             if (InputManager.IsKeyPressed(Keys.LeftControl))
             {
                 currentTime = (currentTime == TimeState.Present) ? TimeState.Past : TimeState.Present;
             }
 
-            foreach (var platform in platforms) platform.Update(currentTime, plates);;
+            foreach (var platform in platforms) platform.Update(currentTime, plates); ;
             foreach (var spike in spikes) spike.Update(currentTime);
             foreach (var hazard in hazards) hazard.Update(gameTime, currentTime);
             foreach (var box in boxes) box.Update(platforms, player);
@@ -85,10 +102,10 @@ namespace FinalProject.Managers
             particleManager.Update();
 
             if (hasExitDoor && player.Hitbox.Intersects(exitDoor))
-                {
-                    currentLevel++;
-                    LoadLevel();
-                }
+            {
+                currentLevel++;
+                LoadLevel();
+            }
 
             foreach (var enemy in enemies)
             {
@@ -149,92 +166,181 @@ namespace FinalProject.Managers
             player.Draw(spriteBatch);
         }
 
-        private string[] GetLevelDesign(int levelNumber)
+        public void DrawBackground(SpriteBatch spriteBatch)
+        {
+            // ✨ 1. ตัดสินใจว่าจะใช้รูปไหน (ปัจจุบัน = Gray, อดีต = Brown)
+            Texture2D currentBg = (currentTime == TimeState.Present) ? bgGray : bgBrown;
+
+            // ✨ 2. ระบบปูกระเบื้อง (Tiling) ให้เต็มฉาก
+            // ตั้งค่าสเกลพื้นหลังให้ใหญ่ขึ้นนิดนึง (คูณ 2) ลายซิกแซกจะได้ดูสวยสมส่วนกับบล็อก 32px
+            int bgScale = 2;
+            int drawWidth = currentBg.Width * bgScale;
+            int drawHeight = currentBg.Height * bgScale;
+
+            int offsetX = (int)(Math.Abs(bgScrollX) % drawWidth) * Math.Sign(bgScrollX);
+            int offsetY = (int)(Math.Abs(bgScrollY) % drawHeight) * Math.Sign(bgScrollY);
+
+            // ลูปวาดพื้นหลังให้กว้าง 4000x2000 พิกเซล (คลุมมิดด่านใหญ่แน่นอน)
+            for (int y = -drawHeight; y < 2000; y += drawHeight)
+            {
+                for (int x = -drawWidth; x < 4000; x += drawWidth)
+                {
+                    spriteBatch.Draw(currentBg, new Rectangle(x + offsetX, y + offsetY, drawWidth, drawHeight), Color.White);
+                }
+            }
+        }
+
+        private (string[] presentMap, string[] pastMap) GetLevelDesign(int levelNumber)
         {
             switch (levelNumber)
             {
                 case 1:
-                    return new string[]
+                    // 🌍 มิติปัจจุบัน (Present - หญ้า)
+                    // ใช้ T สำหรับหนามที่จะโผล่มาในเวลานี้
+                    // ใช้ X สำหรับหนามถาวรที่มีตลอด
+                    string[] present = new string[]
                     {
+                        "0000000000000000000000000000000000000000",
+                        "8......................................8",
+                        "8.....................................D8",
+                        "8...................................0008",
+                        "8...................................8888",
+                        "8...................................8888",
+                        "8..........[11].....................8888",
+                        "8..........{44}.....................8888",
+                        "8..........{44}.........T...........8888", // <--- หนามปัจจุบัน
+                        "8..........{44}.......[111].........8888",
+                        "8.....................{444}.........8888",
+                        "8.....................{444}............8",
+                        "8.....................{444}............8",
+                        "8.....................{444}............8",
+                        "8...............[1]...{444}............8",
+                        "8P..............{4}...{444}............8",
+                        "0000............{4}...{444}............8",
+                        "8888000.........{4}...{444}............8",
+                        "888888800.......{4}...{444}....000000008",
+                        "888888888XXXXXXX888XXX88888XXXX888888888", // <--- พื้นเป็นหนามถาวร (X)
+                        "8888888888888888888888888888888888888888",
+                        "8888888888888888888888888888888888888888",
+                        "8888888888888888888888888888888888888888"
+                    };
 
-                "0000000000000000000000000000000000000000",
-                "0......................................0",
-                "0......................................0",
-                "0.......................0000000........0",
-                "0.......................0.....0........0",
-                "0........E..............0....D0........0",
-                "0.......000.............00...00........0",
-                "0........M...............0...0.........0",
-                "0........................0...0.........0",
-                "0........................1...2.........0",
-                "0........................1...2.........0",
-                "0.........3000....00.....1...2.........0",
-                "0..B.........0...........0...0.........0",
-                "0.H..P.......0......B....0...0.........0",
-                "0000000.W..T.0SSSSSSSSSSS0SSS0SSSSSSSSS0",
-                "0000000000000000000000000000000000000000"
-            };
-                case 2:
-                    return new string[]
+                    // 🌌 มิติอดีต (Past - ไม้)
+                    // ใช้ t สำหรับหนามที่จะโผล่มาในเวลานี้
+                    string[] past = new string[]
                     {
-                "0000000000000000000000000000000000000000",
-                "0P....................................D0",
-                "000000..............................0000",
-                "0....0.............................0..0",
-                "0SSSS0SSS.SSSSSSSSSSSSSSSSSSSSSSSSSSS0SS0",
-                "0000000000000000000000000000000000000000"
-                };
+                        "........................................",
+                        "........................................",
+                        "........................................",
+                        "........................................",
+                        "........................................",
+                        "........................................",
+                        "........................................",
+                        "........................................",
+                        "........................................",
+                        "........................................",
+                        "........................t...............", // <--- หนามอดีต
+                        "......................222...............",
+                        "......................555...............",
+                        "......................555...............",
+                        "......................555...............",
+                        "........................................",
+                        "........................................",
+                        ".........222............................",
+                        ".........555............................",
+                        "........................................",
+                        "........................................",
+                        "........................................",
+                        "........................................"
+                    };
+                    return (present, past);
+
                 default:
-                    return new string[] { "00P0000D00" };
+                    return (new string[] { "00P0000D00" }, new string[] { ".........." });
             }
         }
-        private void LoadLevel()
+
+        private void LoadLayer(string[] levelLayer, int tileSize)
         {
-            platforms.Clear();
-            spikes.Clear();
-            boxes.Clear();
-            enemies.Clear();
-            hazards.Clear();
-            itemManager.hearts.Clear();
-            hasExitDoor = false;
-
-            string[] levelDesign = GetLevelDesign(currentLevel);
-
-            int tileSize = 64;
-
-            for (int y = 0; y < levelDesign.Length; y++)
+            for (int y = 0; y < levelLayer.Length; y++)
             {
-                for (int x = 0; x < levelDesign[y].Length; x++)
+                for (int x = 0; x < levelLayer[y].Length; x++)
                 {
-                    char tile = levelDesign[y][x];
+                    char tile = levelLayer[y][x];
+                    if (tile == '.') continue; // ถ้าเป็นจุดว่างๆ ให้ข้ามไปเลย (ช่วยให้เกมรันเร็วขึ้น)
+
                     Rectangle rect = new Rectangle(x * tileSize, y * tileSize, tileSize, tileSize);
 
-                    if (tile == '0') platforms.Add(new Platform(rect, TimeState.Permanent, dummyTexture));
-                    else if (tile == '1') platforms.Add(new Platform(rect, TimeState.Present, dummyTexture));
-                    else if (tile == '2') platforms.Add(new Platform(rect, TimeState.Past, dummyTexture));
-                    else if (tile == 'S') spikes.Add(new Spike(rect, TimeState.Present, dummyTexture));
+                    Rectangle stoneTop = new Rectangle(16, 0, 16, 16);
+                    Rectangle stoneCenter = new Rectangle(16, 16, 16, 16);
+
+                    Rectangle grassLeft = new Rectangle(96, 0, 16, 16);
+                    Rectangle grassMid = new Rectangle(112, 0, 16, 16);
+                    Rectangle grassRight = new Rectangle(128, 0, 16, 16);
+
+                    Rectangle dirtLeft = new Rectangle(96, 16, 16, 16);
+                    Rectangle dirtCenter = new Rectangle(112, 16, 16, 16);
+                    Rectangle dirtRight = new Rectangle(128, 16, 16, 16);
+
+                    Rectangle woodTop = new Rectangle(16, 64, 16, 16);
+                    Rectangle woodCenter = new Rectangle(16, 80, 16, 16);
+
+                    // --- สร้าง Platforms ---
+                    if (tile == '0') platforms.Add(new Platform(rect, TimeState.Permanent, terrainTexture, stoneTop));
+                    else if (tile == '8') platforms.Add(new Platform(rect, TimeState.Permanent, terrainTexture, stoneCenter));
+
+                    else if (tile == '[') platforms.Add(new Platform(rect, TimeState.Present, terrainTexture, grassLeft));
+                    else if (tile == '1') platforms.Add(new Platform(rect, TimeState.Present, terrainTexture, grassMid));
+                    else if (tile == ']') platforms.Add(new Platform(rect, TimeState.Present, terrainTexture, grassRight));
+                    else if (tile == '{') platforms.Add(new Platform(rect, TimeState.Present, terrainTexture, dirtLeft));
+                    else if (tile == '4') platforms.Add(new Platform(rect, TimeState.Present, terrainTexture, dirtCenter));
+                    else if (tile == '}') platforms.Add(new Platform(rect, TimeState.Present, terrainTexture, dirtRight));
+
+                    else if (tile == '2') platforms.Add(new Platform(rect, TimeState.Past, terrainTexture, woodTop));
+                    else if (tile == '5') platforms.Add(new Platform(rect, TimeState.Past, terrainTexture, woodCenter));
+                    else if (tile == 'X' || tile == 'T' || tile == 't')
+                    {
+                        int drawWidth = 32;
+                        int drawHeight = 64;
+
+                        // 3. จัดตำแหน่งให้อยู่ติดพื้นบล็อกพอดี
+                        Rectangle drawRect = new Rectangle(
+                            x * tileSize + 4,                     // ขยับแกน X มาตรงกลางนิดนึง
+                            y * tileSize + (tileSize - drawHeight), // ดึงแกน Y ลงมาติดพื้นบล็อก
+                            drawWidth,
+                            drawHeight);
+
+                        int hitboxWidth = 24;
+                        int hitboxHeight = 18;
+                        Rectangle spikeHitbox = new Rectangle(
+                            (x * tileSize) + 4,
+                            (y * tileSize) + (tileSize - hitboxHeight),
+                            hitboxWidth, hitboxHeight);
+
+                        // ✨ 3. ส่งกล่องทั้ง 2 ใบเข้าไปตอนสร้างหนาม
+                        if (tile == 'X') spikes.Add(new Spike(spikeHitbox, drawRect, TimeState.Permanent, spikesTexture));
+                        else if (tile == 'T') spikes.Add(new Spike(spikeHitbox, drawRect, TimeState.Present, spikesTexture));
+                        else if (tile == 't') spikes.Add(new Spike(spikeHitbox, drawRect, TimeState.Past, spikesTexture));
+                    }
                     else if (tile == 'P') player = new Player(new Vector2(x * tileSize, y * tileSize), playerAnimations);
                     else if (tile == 'B') boxes.Add(new Box(new Vector2(x * tileSize, y * tileSize), dummyTexture));
-                    // else if (tile == 'E') enemies.Add(new Enemy(new Vector2(x * tileSize, y * tileSize), dummyTexture));
                     else if (tile == 'E')
                     {
-                        // Offset Y by 32 so the 32px enemy sits at the bottom of the 64px tile space
                         Vector2 enemyPos = new Vector2(x * tileSize, (y * tileSize) + 32);
                         enemies.Add(new Enemy(enemyPos, dummyTexture));
                     }
-                    else if (tile == 'W') 
+                    else if (tile == 'W')
                     {
                         // Normal floor hazard
                         hazards.Add(new Hazard(new Vector2(x * tileSize, y * tileSize), TimeState.Permanent, dummyTexture));
                     }
-                    else if (tile == 'M') 
+                    else if (tile == 'M')
                     {
                         // Ceiling hazard (Upside Down)
                         var ceilingHazard = new Hazard(new Vector2(x * tileSize, y * tileSize), TimeState.Permanent, dummyTexture);
                         ceilingHazard.IsUpsideDown = true;
                         hazards.Add(ceilingHazard);
                     }
-                    else if (tile == '3') platforms.Add(new Platform(rect, TimeState.Permanent, dummyTexture, 1));
                     else if (tile == 'T') plates.Add(new PressurePlate(rect, dummyTexture, 1));
                     else if (tile == 'H') itemManager.AddHeart(rect);
                     else if (tile == 'D')
@@ -244,7 +350,24 @@ namespace FinalProject.Managers
                     }
                 }
             }
+        }
+        private void LoadLevel()
+        {
+            // 1. ล้างข้อมูลเก่าทิ้ง
+            platforms.Clear();
+            spikes.Clear();
+            boxes.Clear();
+            enemies.Clear();
+            itemManager.hearts.Clear();
+            hasExitDoor = false;
 
+            // 2. ดึงแผนที่ทั้ง 2 เลเยอร์มา
+            var maps = GetLevelDesign(currentLevel);
+            int tileSize = 32;
+
+            // 3. สั่งโหลดแผนที่ทีละชั้นให้มันซ้อนกัน!
+            LoadLayer(maps.presentMap, tileSize);
+            LoadLayer(maps.pastMap, tileSize);
         }
     }
 }

@@ -1,42 +1,45 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-
 public class Spike
 {
-    public Rectangle Hitbox;
-    public TimeState ActiveTime;
-    public bool IsDangerous;
+    public Rectangle Hitbox { get; private set; }
+    public Rectangle DrawRect { get; private set; }
+    public TimeState SpikeTimeState { get; private set; }
+
+    public bool IsDangerous { get; private set; }
+    private bool isVisible;
+
     private Texture2D texture;
 
-    public Spike(Rectangle hitbox, TimeState activeTime, Texture2D tex)
+    public Spike(Rectangle hitbox, Rectangle drawRect, TimeState timeState, Texture2D tex)
     {
         Hitbox = hitbox;
-        ActiveTime = activeTime;
+        DrawRect = drawRect;
+        SpikeTimeState = timeState;
         texture = tex;
     }
 
     public void Update(TimeState currentTime)
     {
-        if (ActiveTime == TimeState.Permanent)
+        // 
+        if (SpikeTimeState == TimeState.Permanent || SpikeTimeState == currentTime)
         {
             IsDangerous = true;
+            isVisible = true;
         }
         else
         {
-            IsDangerous = (currentTime == ActiveTime);
+            IsDangerous = false;
+            isVisible = false;
         }
     }
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        if (IsDangerous)
+        if (isVisible)
         {
-            spriteBatch.Draw(texture, Hitbox, Color.Red); // สีเข้ม เหยียบได้
-        }
-        else
-        {
-            spriteBatch.Draw(texture, Hitbox, Color.Red * 0.3f); // สีจาง ทะลุได้
+            spriteBatch.Draw(texture, DrawRect, Color.White);
         }
     }
 }
