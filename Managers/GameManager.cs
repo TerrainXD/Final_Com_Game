@@ -14,6 +14,7 @@ namespace FinalProject.Managers
         public List<Spike> spikes;
         public List<Box> boxes;
         public List<Enemy> enemies;
+        public List<PressurePlate> plates;
         public TimeState currentTime;
         private Texture2D dummyTexture;
         private Texture2D heartTexture;
@@ -34,6 +35,7 @@ namespace FinalProject.Managers
             spikes = new List<Spike>();
             boxes = new List<Box>();
             enemies = new List<Enemy>();
+            plates = new List<PressurePlate>();
             currentTime = TimeState.Present;
         }
 
@@ -63,20 +65,27 @@ namespace FinalProject.Managers
         public void Update()
         {
             // สลับเวลาผ่าน InputManager
-            if (InputManager.IsKeyPressed(Keys.LeftShift))
+            if (InputManager.IsKeyPressed(Keys.LeftControl))
             {
                 currentTime = (currentTime == TimeState.Present) ? TimeState.Past : TimeState.Present;
             }
 
-            foreach (var platform in platforms) platform.Update(currentTime);
+            foreach (var platform in platforms) platform.Update(currentTime, plates);;
             foreach (var spike in spikes) spike.Update(currentTime);
             foreach (var box in boxes) box.Update(platforms, player);
             foreach (var enemy in enemies) enemy.Update(platforms, boxes);
+            foreach (var plate in plates) plate.Update(player, boxes);
 
             player.Update(platforms, boxes, particleManager);
             player.CheckSpikeCollision(spikes);
             itemManager.Update(player);
             particleManager.Update();
+
+            if (hasExitDoor && player.Hitbox.Intersects(exitDoor))
+                {
+                    currentLevel++;
+                    LoadLevel();
+                }
 
             foreach (var enemy in enemies)
             {
@@ -119,6 +128,7 @@ namespace FinalProject.Managers
             foreach (var spike in spikes) spike.Draw(spriteBatch);
             foreach (var box in boxes) box.Draw(spriteBatch);
             foreach (var enemy in enemies) enemy.Draw(spriteBatch);
+            foreach (var plate in plates) plate.Draw(spriteBatch);
             if (hasExitDoor) spriteBatch.Draw(dummyTexture, exitDoor, Color.Gold);
             itemManager.Draw(spriteBatch);
             particleManager.Draw(spriteBatch);
@@ -144,10 +154,10 @@ namespace FinalProject.Managers
                 "0........................0...0.........0",
                 "0........................1...2.........0",
                 "0........................1...2.........0",
-                "0..........000....00.....1...2.........0",
+                "0.........3000....00.....1...2.........0",
                 "0..B.........0...........0...0.........0",
                 "0.H..P.......0......B....0...0.........0",
-                "0000000......0SSSSSSSSSSS0SSS0SSSSSSSSS0",
+                "0000000....T.0SSSSSSSSSSS0SSS0SSSSSSSSS0",
                 "0000000000000000000000000000000000000000"
             };
                 case 2:
@@ -197,6 +207,8 @@ namespace FinalProject.Managers
                         Vector2 enemyPos = new Vector2(x * tileSize, (y * tileSize) + 32);
                         enemies.Add(new Enemy(enemyPos, dummyTexture));
                     }
+                    else if (tile == '3') platforms.Add(new Platform(rect, TimeState.Permanent, dummyTexture, 1));
+                    else if (tile == 'T') plates.Add(new PressurePlate(rect, dummyTexture, 1));
                     else if (tile == 'H') itemManager.AddHeart(rect);
                     else if (tile == 'D')
                     {

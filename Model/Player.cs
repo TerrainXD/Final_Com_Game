@@ -100,79 +100,124 @@ public class Player
         IsDead = true;
     }
 
-    public void Update(List<Platform> platforms, List<Box> boxes, ParticleManager particleManager)
+    public void PushOutHorizontally(List<Platform> platforms)
     {
-        if (IsDead)
+        foreach (var platform in platforms)
         {
-            Velocity = Vector2.Zero;
-            return;
-        }
-        {
-            // ==========================================
-            // 1. จัดการ Timer (Dash, อมตะ, สตัน)
-            // ==========================================
-            if (dashCooldownTimer > 0) dashCooldownTimer--;
-            if (invincibilityTimer > 0)
+            // If the platform is solid and the box is currently overlapping it
+            if (platform.IsSolid && Hitbox.Intersects(platform.Hitbox))
             {
-                invincibilityTimer--;
-                if (invincibilityTimer <= 0) isInvincible = false;
-            }
-            if (stunTimer > 0) stunTimer--;
+                // Calculate how much the box is overlapping on the left and right sides
+                float pushLeftDist = Hitbox.Right - platform.Hitbox.Left;
+                float pushRightDist = platform.Hitbox.Right - Hitbox.Left;
 
-
-            // ==========================================
-            // 2. รับ Input แกน X และ Dash
-            // ==========================================
-            if (InputManager.IsKeyPressed(Keys.LeftControl) && dashCooldownTimer <= 0 && stunTimer <= 0)
-            {
-                isDashing = true;
-                dashTimer = dashDuration;
-                dashCooldownTimer = dashCooldown;
-                dashDirection = facingRight ? 1f : -1f;
-            }
-
-            if (stunTimer <= 0 && !isDashing)
-            {
-                if (wallJumpTimer > 0)
+                // Push the box in the direction that has the shortest distance to escape
+                if (pushLeftDist < pushRightDist)
                 {
-                    Velocity.X = forcedDirection * wallJumpForce;
-                    wallJumpTimer--;
+                    // It's closer to the left edge, so push it Left
+                    Position.X -= pushLeftDist;
                 }
                 else
                 {
-                    Velocity.X = 0;
-                    if (InputManager.IsKeyDown(Keys.A) || InputManager.IsKeyDown(Keys.Left)) Velocity.X = -speed;
-                    if (InputManager.IsKeyDown(Keys.D) || InputManager.IsKeyDown(Keys.Right)) Velocity.X = speed;
+                    // It's closer to the right edge, so push it Right
+                    Position.X += pushRightDist;
                 }
             }
+        }
+    }
+    public void Update(List<Platform> platforms, List<Box> boxes)
+    {
+        PushOutHorizontally(platforms);
+        if (dashCooldownTimer > 0) dashCooldownTimer--;
+        if (InputManager.IsKeyPressed(Keys.LeftShift) && dashCooldownTimer <= 0 && stunTimer <= 0)
+        {
+            isDashing = true;
+            dashTimer = dashDuration;
+            dashCooldownTimer = dashCooldown;
+            dashDirection = facingRight ? 1f : -1f;
+            isInvincible = true;
+            invincibilityTimer = dashDuration; 
+        }
+        // --- 1. เช็คทิศทางการหันหน้า ---
+        if (Velocity.X > 0) facingRight = true;
+        else if (Velocity.X < 0) facingRight = false;
 
-            if (isDashing)
+        // --- 2. ตัดสินใจว่าตอนนี้อยู่ State ไหน ---
+        PlayerState newState = PlayerState.Idle;
+
+        if (IsDead) newState = PlayerState.Die;
+        else if (stunTimer > 0) newState = PlayerState.Hurt;
+        else if (isDashing) newState = PlayerState.Dashing;
+        else if (!isGrounded)
+        {
+            if (isDoubleJump) newState = PlayerState.DoubleJumping;
+            else newState = PlayerState.Jumping;
+        }
+        else if (Velocity.X != 0) newState = PlayerState.Running;
+        else newState = PlayerState.Idle;
+
+        // --- 3. เปลี่ยนแอนิเมชันถ้าระบบสั่งเปลี่ยน State ---
+        if (newState != currentState)
+        {
+            currentState = newState;
+            currentAnimation = animations[currentState];
+            currentFrame = 0; // เริ่มเล่นเฟรมแรกใหม่
+            frameCounter = 0;
+        }
+
+        // --- 4. รันเฟรมแอนิเมชัน ---
+        frameCounter++;
+        if (frameCounter >= frameDelay)
+        {
+            frameCounter = 0;
+            currentFrame++;
+
+            if (currentFrame >= currentAnimation.FrameCount)
             {
-                Velocity.X = dashDirection * dashSpeed;
-                Velocity.Y = 0;
-                dashTimer--;
-                if (dashTimer <= 0) isDashing = false;
+                if (currentAnimation.IsLooping)
+                    currentFrame = 0; // วนกลับไปเฟรมแรก
+                else
+                    currentFrame = currentAnimation.FrameCount - 1; // ค้างที่เฟรมสุดท้าย (ใช้กับท่าตาย)
             }
-
-
-            // ==========================================
-            // 3. เรดาร์เช็คสภาพแวดล้อม (ต้องทำก่อนไปคำนวณแอนิเมชัน)
-            // ==========================================
-            Rectangle groundCheck = new Rectangle((int)Position.X, (int)Position.Y + 1, Hitbox.Width, Hitbox.Height);
-            isGrounded = false;
-
-            // เช็คพื้นก่อนเสมอ
-            foreach (var platform in platforms)
-                if (platform.IsSolid && groundCheck.Intersects(platform.Hitbox)) isGrounded = true;
-            foreach (var box in boxes)
-                if (groundCheck.Intersects(box.Hitbox)) isGrounded = true;
-
-            if (isGrounded) isDoubleJump = false;
-
-            Rectangle leftCheck = new Rectangle((int)Position.X - 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
-            isTouchingLeftWall = false;
-            Rectangle rightCheck = new Rectangle((int)Position.X + 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
-            isTouchingRightWall = false;
+        }
+        // 1. เช็คระยะเวลาอมตะ
+        if (invincibilityTimer > 0)
+        {
+            invincibilityTimer--;
+            if (invincibilityTimer <= 0) isInvincible = false;
+        }
+        // 2. ลอจิกการเคลื่อนที่แกน X (จัดลำดับความสำคัญ: Stun -> WallJump -> เดินปกติ)
+        if (stunTimer > 0)
+        {
+            stunTimer--;
+            // ตอนติด Stun กระเด็น ห้ามเปลี่ยนค่า Velocity.X ปล่อยให้มันลอยไปตามแรงกระแทก
+        }
+        else if (isDashing)
+        {
+            Velocity.X = dashDirection * dashSpeed;
+            Velocity.Y = 0; // Freeze gravity during dash
+            dashTimer--;
+            if (dashTimer <= 0) isDashing = false;
+        }
+        else if (wallJumpTimer > 0)
+        {
+            Velocity.X = forcedDirection * wallJumpForce;
+            wallJumpTimer--; // ล็อคปุ่มเดินตามระยะเวลา Wall Jump
+        }
+        else
+        {
+            // เดินปกติ
+            Velocity.X = 0;
+            if (InputManager.IsKeyDown(Keys.A) || InputManager.IsKeyDown(Keys.Left)) Velocity.X = -speed;
+            if (InputManager.IsKeyDown(Keys.D) || InputManager.IsKeyDown(Keys.Right)) Velocity.X = speed;
+        }
+        // 3. เรดาร์เช็คสภาพแวดล้อม
+        Rectangle groundCheck = new Rectangle((int)Position.X, (int)Position.Y + 1, Hitbox.Width, Hitbox.Height);
+        isGrounded = false;
+        Rectangle leftCheck = new Rectangle((int)Position.X - 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
+        isTouchingLeftWall = false;
+        Rectangle rightCheck = new Rectangle((int)Position.X + 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
+        isTouchingRightWall = false;
 
             // ✨ แก้บั๊กสั่น: "จะเกาะกำแพงได้ ต้องลอยอยู่กลางอากาศเท่านั้น" (ไม่เช็คเรดาร์กำแพงถ้าเหยียบพื้นอยู่)
             if (!isGrounded)
