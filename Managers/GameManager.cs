@@ -16,11 +16,14 @@ namespace FinalProject.Managers
         public List<Enemy> enemies;
         public List<PressurePlate> plates;
         public List<Hazard> hazards;
+        public List<SwingingHazard> swingingHazards;
         public TimeState currentTime;
         private Texture2D dummyTexture;
         private Texture2D terrainTexture;
         private Texture2D spikesTexture;
         private Texture2D heartTexture;
+        private Texture2D maceTexture;
+        private Texture2D maceBlockTexture;
 
         private Texture2D bgBrown;
         private Texture2D bgGray;
@@ -45,6 +48,7 @@ namespace FinalProject.Managers
             boxes = new List<Box>();
             enemies = new List<Enemy>();
             hazards = new List<Hazard>();
+            swingingHazards = new List<SwingingHazard>();
             plates = new List<PressurePlate>();
             currentTime = TimeState.Present;
         }
@@ -56,6 +60,8 @@ namespace FinalProject.Managers
             SpriteFont font = content.Load<SpriteFont>("GameFont");
             terrainTexture = content.Load<Texture2D>("Terrain/Terrain");
             spikesTexture = content.Load<Texture2D>("Spike/Idle");
+            maceTexture = content.Load<Texture2D>("Spike/Spiked Ball");
+            maceBlockTexture = content.Load<Texture2D>("Spike/Block");
 
             bgBrown = content.Load<Texture2D>("Terrain/Brown");
             bgGray = content.Load<Texture2D>("Terrain/Gray");
@@ -126,6 +132,16 @@ namespace FinalProject.Managers
                 }
             }
 
+            foreach (var mace in swingingHazards)
+            {
+                mace.Update(gameTime);
+                if (player.Hitbox.Intersects(mace.Hitbox))
+                {
+                    int pushDir = (player.Position.X < mace.HeadPosition.X) ? -1 : 1;
+                    player.TakeDamage(pushDir);
+                }
+            }
+
             if (player.IsDead)
             {
                 LoadLevel();
@@ -159,6 +175,7 @@ namespace FinalProject.Managers
             foreach (var box in boxes) box.Draw(spriteBatch);
             foreach (var enemy in enemies) enemy.Draw(spriteBatch);
             foreach (var hazard in hazards) hazard.Draw(spriteBatch);
+            foreach (var mace in swingingHazards) mace.Draw(spriteBatch);
             foreach (var plate in plates) plate.Draw(spriteBatch);
             if (hasExitDoor) spriteBatch.Draw(dummyTexture, exitDoor, Color.Gold);
             itemManager.Draw(spriteBatch);
@@ -203,7 +220,7 @@ namespace FinalProject.Managers
                         "0000000000000000000000000000000000000000",
                         "8......................................8",
                         "8.....................................D8",
-                        "8...................................0008",
+                        "8....O..............................0008",
                         "8...................................8888",
                         "8...................................8888",
                         "8..........[11].....................8888",
@@ -212,14 +229,14 @@ namespace FinalProject.Managers
                         "8..........{44}.......[111].........8888",
                         "8.....................{444}.........8888",
                         "8.....................{444}............8",
-                        "8.....................{444}............8",
+                        "8......o..............{444}............8",
                         "8.....................{444}............8",
                         "8...............[1]...{444}............8",
                         "8P..............{4}...{444}............8",
                         "0000............{4}...{444}............8",
                         "8888000.........{4}...{444}............8",
                         "888888800.......{4}...{444}....000000008",
-                        "888888888XXXXXXX888XXX88888XXXX888888888", // <--- พื้นเป็นหนามถาวร (X)
+                        "888888888WXXXXXX888XXX88888XXXX888888888", // <--- พื้นเป็นหนามถาวร (X)
                         "8888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888"
@@ -341,13 +358,40 @@ namespace FinalProject.Managers
                         ceilingHazard.IsUpsideDown = true;
                         hazards.Add(ceilingHazard);
                     }
-                    else if (tile == 'T') plates.Add(new PressurePlate(rect, dummyTexture, 1));
+                    // else if (tile == '3') platforms.Add(new Platform(rect, TimeState.Permanent, dummyTexture, 1));
+                    else if (tile == 'A') plates.Add(new PressurePlate(rect, dummyTexture, 1));
                     else if (tile == 'H') itemManager.AddHeart(rect);
                     else if (tile == 'D')
                     {
                         exitDoor = rect;
                         hasExitDoor = true;
                     }
+                    else if (tile == 'O' || tile == 'o') // Handle both Normal and 360 modes
+                    {
+                        // 1. Calculate Positions
+                        Vector2 anchorPos = new Vector2(rect.Center.X, rect.Top);
+                        Rectangle platformRect = new Rectangle(rect.X, rect.Y, 32, 32); // Standard tile size
+                        Rectangle sourceRect = new Rectangle(192, 16, 16, 16); // Your stone/block texture
+
+                        // 2. Create and add the Swinging Hazard
+                        if (tile == 'O') // Normal Mode
+                        {
+                            var mace = new SwingingHazard(anchorPos, 2.0f, 150f, maceTexture, dummyTexture);
+                            mace.IsFullRotation = false;
+                            swingingHazards.Add(mace);
+                        }
+                        else if (tile == 'o') // 360 Mode
+                        {
+                            var mace = new SwingingHazard(anchorPos, 2.5f, 100f, maceTexture, dummyTexture);
+                            mace.IsFullRotation = true;
+                            swingingHazards.Add(mace);
+                        }
+
+                        // 3. ADD THIS: Create a solid platform at the same spot
+                        // This makes the block "platformable" using your existing logic
+                        platforms.Add(new Platform(platformRect, TimeState.Permanent, terrainTexture, sourceRect));
+                    }
+
                 }
             }
         }
@@ -358,6 +402,7 @@ namespace FinalProject.Managers
             spikes.Clear();
             boxes.Clear();
             enemies.Clear();
+            swingingHazards.Clear();
             itemManager.hearts.Clear();
             hasExitDoor = false;
 
