@@ -100,7 +100,32 @@ public class Player
         IsDead = true;
     }
 
-    public void Update(List<Platform> platforms, List<Box> boxes, ParticleManager particleManager)
+    public void PushOutHorizontally(List<Platform> platforms)
+    {
+        foreach (var platform in platforms)
+        {
+            // If the platform is solid and the box is currently overlapping it
+            if (platform.IsSolid && Hitbox.Intersects(platform.Hitbox))
+            {
+                // Calculate how much the box is overlapping on the left and right sides
+                float pushLeftDist = Hitbox.Right - platform.Hitbox.Left;
+                float pushRightDist = platform.Hitbox.Right - Hitbox.Left;
+
+                // Push the box in the direction that has the shortest distance to escape
+                if (pushLeftDist < pushRightDist)
+                {
+                    // It's closer to the left edge, so push it Left
+                    Position.X -= pushLeftDist;
+                }
+                else
+                {
+                    // It's closer to the right edge, so push it Right
+                    Position.X += pushRightDist;
+                }
+            }
+        }
+    }
+    public void Update(List<Platform> platforms, List<Box> boxes)
     {
         if (IsDead)
         {
@@ -111,7 +136,8 @@ public class Player
             // ==========================================
             // 1. จัดการ Timer (Dash, อมตะ, สตัน)
             // ==========================================
-            if (dashCooldownTimer > 0) dashCooldownTimer--;
+            PushOutHorizontally(platforms);
+        if (dashCooldownTimer > 0) dashCooldownTimer--;
             if (invincibilityTimer > 0)
             {
                 invincibilityTimer--;
@@ -123,7 +149,7 @@ public class Player
             // ==========================================
             // 2. รับ Input แกน X และ Dash
             // ==========================================
-            if (InputManager.IsKeyPressed(Keys.LeftControl) && dashCooldownTimer <= 0 && stunTimer <= 0)
+            if (InputManager.IsKeyPressed(Keys.LeftShift) && dashCooldownTimer <= 0 && stunTimer <= 0)
             {
                 isDashing = true;
                 dashTimer = dashDuration;
