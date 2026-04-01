@@ -13,6 +13,7 @@ namespace FinalProject.Managers
         public List<Platform> platforms;
         public List<Spike> spikes;
         public List<Box> boxes;
+        public List<Enemy> enemies;
         public TimeState currentTime;
         private Texture2D dummyTexture;
         private Texture2D heartTexture;
@@ -31,6 +32,7 @@ namespace FinalProject.Managers
             platforms = new List<Platform>();
             spikes = new List<Spike>();
             boxes = new List<Box>();
+            enemies = new List<Enemy>();
             currentTime = TimeState.Present;
         }
 
@@ -47,8 +49,8 @@ namespace FinalProject.Managers
                 { Player.PlayerState.Jumping, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_jump"), 4) },
                 { Player.PlayerState.DoubleJumping, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_doublejump"), 6) },
                 { Player.PlayerState.Hurt, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_hurt"), 2) },
-                { Player.PlayerState.Die, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_death"), 6, false)}
-
+                { Player.PlayerState.Die, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_death"), 6, false)},
+                { Player.PlayerState.Dashing, new Animation(content.Load<Texture2D>("PlayerModel/Cyborg_run"), 6) }
             };
 
             itemManager = new ItemManager(heartTex);
@@ -67,10 +69,20 @@ namespace FinalProject.Managers
             foreach (var platform in platforms) platform.Update(currentTime);
             foreach (var spike in spikes) spike.Update(currentTime);
             foreach (var box in boxes) box.Update(platforms, player);
+            foreach (var enemy in enemies) enemy.Update(platforms, boxes);
 
             player.Update(platforms, boxes);
             player.CheckSpikeCollision(spikes);
             itemManager.Update(player);
+
+            foreach (var enemy in enemies)
+                    {
+                        if (player.Hitbox.Intersects(enemy.Hitbox))
+                        {
+                            int pushDir = (player.Position.X < enemy.Position.X) ? -1 : 1;
+                            player.TakeDamage(pushDir);
+                        }
+                    }
 
             if (player.IsDead)
             {
@@ -103,6 +115,7 @@ namespace FinalProject.Managers
             foreach (var platform in platforms) platform.Draw(spriteBatch);
             foreach (var spike in spikes) spike.Draw(spriteBatch);
             foreach (var box in boxes) box.Draw(spriteBatch);
+            foreach (var enemy in enemies) enemy.Draw(spriteBatch);
             if (hasExitDoor) spriteBatch.Draw(dummyTexture, exitDoor, Color.Gold);
             itemManager.Draw(spriteBatch);
             player.Draw(spriteBatch);
@@ -121,8 +134,8 @@ namespace FinalProject.Managers
                 "0......................................0",
                 "0.......................0000000........0",
                 "0.......................0.....0........0",
-                "0.......................0....D0........0",
-                "0.......................00...00........0",
+                "0........E..............0....D0........0",
+                "0.......000.............00...00........0",
                 "0........................0...0.........0",
                 "0........................0...0.........0",
                 "0........................1...2.........0",
@@ -139,8 +152,8 @@ namespace FinalProject.Managers
                 "0000000000000000000000000000000000000000",
                 "0P....................................D0",
                 "000000..............................0000",
-                "0....0..............................0..0",
-                "0SSSS0SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS0SS0",
+                "0....0.............................0..0",
+                "0SSSS0SSS.SSSSSSSSSSSSSSSSSSSSSSSSSSS0SS0",
                 "0000000000000000000000000000000000000000"
                 };
                 default:
@@ -152,6 +165,7 @@ namespace FinalProject.Managers
             platforms.Clear();
             spikes.Clear();
             boxes.Clear();
+            enemies.Clear();
             itemManager.hearts.Clear();
             hasExitDoor = false;
 
@@ -172,6 +186,13 @@ namespace FinalProject.Managers
                     else if (tile == 'S') spikes.Add(new Spike(rect, TimeState.Present, dummyTexture));
                     else if (tile == 'P') player = new Player(new Vector2(x * tileSize, y * tileSize), playerAnimations);
                     else if (tile == 'B') boxes.Add(new Box(new Vector2(x * tileSize, y * tileSize), dummyTexture));
+                    // else if (tile == 'E') enemies.Add(new Enemy(new Vector2(x * tileSize, y * tileSize), dummyTexture));
+                    else if (tile == 'E') 
+                    {
+                        // Offset Y by 32 so the 32px enemy sits at the bottom of the 64px tile space
+                        Vector2 enemyPos = new Vector2(x * tileSize, (y * tileSize) + 32); 
+                        enemies.Add(new Enemy(enemyPos, dummyTexture));
+                    }
                     else if (tile == 'H') itemManager.AddHeart(rect);
                     else if (tile == 'D')
                     {
