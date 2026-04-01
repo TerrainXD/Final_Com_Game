@@ -51,7 +51,7 @@ public class Game1 : Game
             Exit();
 
         InputManager.Update();
-        gameManager.Update();
+        gameManager.Update(gameTime);
         camera.Follow(gameManager.player, GraphicsDevice);
 
         base.Update(gameTime);

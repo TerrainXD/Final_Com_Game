@@ -15,6 +15,7 @@ namespace FinalProject.Managers
         public List<Box> boxes;
         public List<Enemy> enemies;
         public List<PressurePlate> plates;
+        public List<Hazard> hazards;
         public TimeState currentTime;
         private Texture2D dummyTexture;
         private Texture2D heartTexture;
@@ -35,6 +36,7 @@ namespace FinalProject.Managers
             spikes = new List<Spike>();
             boxes = new List<Box>();
             enemies = new List<Enemy>();
+            hazards = new List<Hazard>();
             plates = new List<PressurePlate>();
             currentTime = TimeState.Present;
         }
@@ -62,7 +64,7 @@ namespace FinalProject.Managers
             LoadLevel();
         }
 
-        public void Update()
+        public void Update(GameTime gameTime)
         {
             // สลับเวลาผ่าน InputManager
             if (InputManager.IsKeyPressed(Keys.LeftControl))
@@ -72,6 +74,7 @@ namespace FinalProject.Managers
 
             foreach (var platform in platforms) platform.Update(currentTime, plates);;
             foreach (var spike in spikes) spike.Update(currentTime);
+            foreach (var hazard in hazards) hazard.Update(gameTime, currentTime);
             foreach (var box in boxes) box.Update(platforms, player);
             foreach (var enemy in enemies) enemy.Update(platforms, boxes);
             foreach (var plate in plates) plate.Update(player, boxes);
@@ -92,6 +95,16 @@ namespace FinalProject.Managers
                 if (player.Hitbox.Intersects(enemy.Hitbox))
                 {
                     int pushDir = (player.Position.X < enemy.Position.X) ? -1 : 1;
+                    player.TakeDamage(pushDir);
+                }
+            }
+
+            foreach (var hazard in hazards)
+            {
+                if (hazard.IsDangerous && player.Hitbox.Intersects(hazard.Hitbox))
+                {
+                    // Push player away from hazard center
+                    int pushDir = (player.Position.X < hazard.Hitbox.Center.X) ? -1 : 1;
                     player.TakeDamage(pushDir);
                 }
             }
@@ -128,6 +141,7 @@ namespace FinalProject.Managers
             foreach (var spike in spikes) spike.Draw(spriteBatch);
             foreach (var box in boxes) box.Draw(spriteBatch);
             foreach (var enemy in enemies) enemy.Draw(spriteBatch);
+            foreach (var hazard in hazards) hazard.Draw(spriteBatch);
             foreach (var plate in plates) plate.Draw(spriteBatch);
             if (hasExitDoor) spriteBatch.Draw(dummyTexture, exitDoor, Color.Gold);
             itemManager.Draw(spriteBatch);
@@ -150,14 +164,14 @@ namespace FinalProject.Managers
                 "0.......................0.....0........0",
                 "0........E..............0....D0........0",
                 "0.......000.............00...00........0",
-                "0........................0...0.........0",
+                "0........M...............0...0.........0",
                 "0........................0...0.........0",
                 "0........................1...2.........0",
                 "0........................1...2.........0",
                 "0.........3000....00.....1...2.........0",
                 "0..B.........0...........0...0.........0",
                 "0.H..P.......0......B....0...0.........0",
-                "0000000....T.0SSSSSSSSSSS0SSS0SSSSSSSSS0",
+                "0000000.W..T.0SSSSSSSSSSS0SSS0SSSSSSSSS0",
                 "0000000000000000000000000000000000000000"
             };
                 case 2:
@@ -180,6 +194,7 @@ namespace FinalProject.Managers
             spikes.Clear();
             boxes.Clear();
             enemies.Clear();
+            hazards.Clear();
             itemManager.hearts.Clear();
             hasExitDoor = false;
 
@@ -206,6 +221,18 @@ namespace FinalProject.Managers
                         // Offset Y by 32 so the 32px enemy sits at the bottom of the 64px tile space
                         Vector2 enemyPos = new Vector2(x * tileSize, (y * tileSize) + 32);
                         enemies.Add(new Enemy(enemyPos, dummyTexture));
+                    }
+                    else if (tile == 'W') 
+                    {
+                        // Normal floor hazard
+                        hazards.Add(new Hazard(new Vector2(x * tileSize, y * tileSize), TimeState.Permanent, dummyTexture));
+                    }
+                    else if (tile == 'M') 
+                    {
+                        // Ceiling hazard (Upside Down)
+                        var ceilingHazard = new Hazard(new Vector2(x * tileSize, y * tileSize), TimeState.Permanent, dummyTexture);
+                        ceilingHazard.IsUpsideDown = true;
+                        hazards.Add(ceilingHazard);
                     }
                     else if (tile == '3') platforms.Add(new Platform(rect, TimeState.Permanent, dummyTexture, 1));
                     else if (tile == 'T') plates.Add(new PressurePlate(rect, dummyTexture, 1));
