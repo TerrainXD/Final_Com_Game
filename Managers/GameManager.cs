@@ -123,7 +123,7 @@ namespace FinalProject.Managers
             foreach (var spike in spikes) spike.Update(currentTime);
             foreach (var hazard in hazards) hazard.Update(currentTime, gameTime);
             foreach (var box in boxes) box.Update(platforms, player);
-            foreach (var enemy in enemies) enemy.Update(gameTime,platforms, boxes, currentTime);
+            foreach (var enemy in enemies) enemy.Update(gameTime, platforms, boxes, currentTime);
             foreach (var plate in plates) plate.Update(player, boxes);
 
             player.Update(platforms, boxes, particleManager);
@@ -243,11 +243,11 @@ namespace FinalProject.Managers
                     string[] present = new string[]
                     {
                         "000000000000000000000000000000000000000000000000000000000000",
-                        // "8..........................................................8",
-                        // "8..........................................................8",
-                        // "8..........................................................8",
-                        // "8..........................................................8",
-                        // "8..........................................................8",
+                        "8..........................................................8",
+                        "8..........................................................8",
+                        "8..........................................................8",
+                        "8..........................................................8",
+                        "8..........................................................8",
                         "8..............M...........................................8",
                         "8..........................................................8",
                         "8..........................................................8",
@@ -260,8 +260,8 @@ namespace FinalProject.Managers
                         "8.[111]............[11]...............J....................8",
                         "8.{444}............{44}..........[11].A....................8",
                         "8.{444}............{44}..........{44[11]...................8",
-                        "8.........z........{44}.......[11]44444}...................8",
-                        "8..................{44}.......{44444444}...................8",
+                        "8.........z.......<{44}.......[11]44444}...................8",
+                        "8.................<{44}.......{44444444}...................8",
                         "8..................{44}................B...................8",
                         "8[1]...............{44}....................................8",
                         "8{4}...............{44}.......[11111111]...........[111111]8",
@@ -278,11 +278,11 @@ namespace FinalProject.Managers
                     string[] past = new string[]
                     {
                         "000000000000000000000000000000000000000000000000000000000000",
-                        // "8..........................................................8",
-                        // "8..........................................................8",
-                        // "8..........................................................8",
-                        // "8..........................................................8",
-                        // "8..........................................................8",
+                        "8..........................................................8",
+                        "8..........................................................8",
+                        "8..........................................................8",
+                        "8..........................................................8",
+                        "8..........................................................8",
                         "8..........................................................8",
                         "8..........................................................8",
                         "8..........................................................8",
@@ -444,26 +444,56 @@ namespace FinalProject.Managers
                         else if (tile == 'T') spikes.Add(new Spike(spikeHitbox, drawRect, TimeState.Present, spikesTexture));
                         else if (tile == 't') spikes.Add(new Spike(spikeHitbox, drawRect, TimeState.Past, spikesTexture));
                     }
+                    else if (tile == '<' || tile == '>')
+                    {
+                        int drawWidth = 32;
+                        int drawHeight = 32;
+
+                        int hitboxWidth = 24;
+                        int hitboxHeight = 18;
+
+                        Rectangle spikeHitbox;
+                        float rotation = 0f;
+
+                        Vector2 origin = new Vector2(spikesTexture.Width / 2f, spikesTexture.Height / 2f);
+
+                        Rectangle drawRect = new Rectangle(
+                            (x * tileSize) + (tileSize / 2),
+                            (y * tileSize) + (tileSize / 2),
+                            drawWidth,
+                            drawHeight);
+
+                        if (tile == '>')
+                        {
+                            rotation = MathHelper.PiOver2;
+                            spikeHitbox = new Rectangle((x * tileSize), (y * tileSize) + (tileSize - hitboxHeight) / 2, hitboxWidth, hitboxHeight);
+                        }
+                        else
+                        {
+                            rotation = -MathHelper.PiOver2;
+                            spikeHitbox = new Rectangle((x * tileSize) + (tileSize - hitboxWidth), (y * tileSize) + (tileSize - hitboxHeight) / 2, hitboxWidth, hitboxHeight);
+                        }
+
+                        spikes.Add(new Spike(spikeHitbox, drawRect, TimeState.Permanent, spikesTexture, rotation, origin));
+                    }
                     else if (tile == 'P') player = new Player(new Vector2(x * tileSize, y * tileSize), playerAnimations);
                     else if (tile == 'B') boxes.Add(new Box(new Vector2(x * tileSize, y * tileSize), boxTexture));
-                    else if (tile == 'E') // Present Enemy
+                    else if (tile == 'E')
                     {
                         Vector2 enemyPos = new Vector2(x * tileSize, (y * tileSize) + 32);
-                        enemies.Add(new Enemy(enemyPos, slimeTexture, TimeState.Present)); 
+                        enemies.Add(new Enemy(enemyPos, slimeTexture, TimeState.Present));
                     }
-                    else if (tile == 'e') // Past Enemy
+                    else if (tile == 'e')
                     {
                         Vector2 enemyPos = new Vector2(x * tileSize, (y * tileSize) + 32);
-                        enemies.Add(new Enemy(enemyPos, slimeTexture, TimeState.Past)); 
+                        enemies.Add(new Enemy(enemyPos, slimeTexture, TimeState.Past));
                     }
                     else if (tile == 'W')
                     {
-                        // Normal floor hazard
                         hazards.Add(new Hazard(new Vector2(x * tileSize, y * tileSize), TimeState.Permanent, spearTexture));
                     }
                     else if (tile == 'M')
                     {
-                        // Ceiling hazard (Upside Down)
                         var ceilingHazard = new Hazard(new Vector2(x * tileSize, y * tileSize), TimeState.Permanent, spearTexture);
                         ceilingHazard.IsUpsideDown = true;
                         hazards.Add(ceilingHazard);
