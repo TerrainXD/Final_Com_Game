@@ -9,7 +9,7 @@ public class Hazard
     {
         get
         {
-            return isVisible && currentFrame >= 3 && currentFrame <= 10;
+return isVisible && currentFrame >= 1 && currentFrame <= 6;
         }
     }
     private bool isVisible;
@@ -26,38 +26,51 @@ public class Hazard
     private Rectangle sourceRect;
     private float scaleX = 1.0f;
     private float scaleY = 4.5f;
+    private Texture2D debugTexture;
 
-    private float GetHeightMultiplier()
+   private float GetHeightMultiplier()
     {
         switch (currentFrame)
         {
-            case 0: case 1: case 2: return 0.1f; // เพิ่งเริ่ม/อยู่ใต้ดิน (สูง 10%)
-            case 3: return 0.3f;                 // เริ่มโผล่ (สูง 30%)
-            case 4: return 0.5f;                 // โผล่ครึ่งนึง (สูง 50%)
-            case 5: return 0.75f;                // เกือบสุด (สูง 75%)
-            case 6: case 7: case 8: return 0.95f;// พุ่งสุดความสูง (สูง 95%)
-            case 9: return 0.7f;                 // เริ่มหดกลับ (สูง 70%)
-            case 10: return 0.4f;                // หดลงครึ่งนึง (สูง 40%)
-            case 11: return 0.1f;                // กำลังจะมิดดิน (สูง 10%)
-            default: return 1.0f;
+            // 🚀 ขาขึ้น (พุ่งอย่างไว)
+            case 0: return 0.0f;  
+            case 1: return 0.60f; 
+            case 2: return 0.85f; 
+            case 3: return 0.95f; 
+            
+            // 🛑 ค้างไว้แป๊บเดียว
+            case 4: return 0.95f; 
+            case 5: return 0.95f; 
+            
+            // ⏬ ขาลง (แก้ตรงนี้! สั่งให้หดเร็วขึ้น)
+            case 6: return 0.40f; // เฟรม 6: ภาพเริ่มหด กล่องก็หดตามทันทีเหลือ 40%
+            
+            // เฟรม 7-11: ภาพมิดดินไปแล้ว สั่ง 0.0f ให้หมด!
+            case 7: return 0.0f;  
+            case 8: return 0.0f;  
+            case 9: return 0.0f;  
+            case 10: return 0.0f; 
+            case 11: return 0.0f; 
+            
+            default: return 0.0f; // ค่า default ให้เป็น 0 ไว้ก่อนชัวร์สุดครับ
         }
     }
-    public Rectangle Hitbox
+  public Rectangle Hitbox
     {
         get
         {
             int maxH = (int)(frameHeight * scaleY);
-
+            
             int currentH = (int)(maxH * GetHeightMultiplier());
+            
+            int hitboxWidth = 8;
+            int hitboxX = (int)Position.X + 12;
 
-            int w = (int)(frameWidth * scaleX);
-
-            int y = IsUpsideDown ? (int)Position.Y : (int)Position.Y + 32 - currentH;
-
-            return new Rectangle((int)Position.X + 8, y, w - 16, currentH);
+            int hitboxY = IsUpsideDown ? (int)Position.Y : (int)Position.Y + 32 - currentH;
+            
+            return new Rectangle(hitboxX, hitboxY, hitboxWidth, currentH);
         }
-    }
-    public Hazard(Vector2 startPos, TimeState timeState, Texture2D tex)
+    }    public Hazard(Vector2 startPos, TimeState timeState, Texture2D tex)
     {
         Position = startPos;
         HazardTimeState = timeState;
@@ -66,15 +79,14 @@ public class Hazard
         totalFrames = 12;
         frameWidth = 32;
         frameHeight = 32;
-        frameTime = 0.1f;
+        frameTime = 0.15f;
 
         currentFrame = 0;
         elapsedTime = 0f;
         sourceRect = new Rectangle(0, 0, frameWidth, frameHeight);
     }
 
-    // ✨ ✨ ✨ แก้ไข Update ให้รับค่า GameTime เพื่อใช้คำนวณเวลาแอนิเมชัน ✨ ✨ ✨
-    public void Update(TimeState currentTime, GameTime gameTime)
+      public void Update(TimeState currentTime, GameTime gameTime)
     {
         if (HazardTimeState == TimeState.Permanent || HazardTimeState == currentTime)
         {
@@ -127,6 +139,15 @@ public class Hazard
             SpriteEffects flipEffect = IsUpsideDown ? SpriteEffects.FlipVertically : SpriteEffects.None;
 
             spriteBatch.Draw(texture, drawRect, sourceRect, Color.White, 0f, Vector2.Zero, flipEffect, 0f);
+
+            if (debugTexture == null)
+            {
+                debugTexture = new Texture2D(spriteBatch.GraphicsDevice, 1, 1);
+                debugTexture.SetData(new[] { Color.Red * 0.5f }); // สีแดงแบบโปร่งแสง 50%
+            }
+            
+            // วาดกล่องแดงให้เห็นกันชัดๆ
+            spriteBatch.Draw(debugTexture, Hitbox, Color.White);
         }
     }
 }
