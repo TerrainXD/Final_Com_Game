@@ -10,15 +10,27 @@ namespace FinalProject
         public Rectangle Hitbox;
         public bool IsPressed { get; private set; }
         private Texture2D texture;
-        private Color activeColor = Color.LimeGreen;
-        private Color inactiveColor = Color.DarkRed;
+
+        private int frameWidth = 28;
+        private int frameHeight = 28;
+
+        private Rectangle unpressedRect;
+        private Rectangle pressedRect;
+
+        private Vector2 position;
 
         public PressurePlate(Rectangle rect, Texture2D tex, int id)
-            {
-                PlateID = id;
-                Hitbox = new Rectangle(rect.X, rect.Y + 48, rect.Width, 16); 
-                texture = tex;
-            }
+        {
+            PlateID = id;
+            texture = tex;
+            position = new Vector2(rect.X + 2, rect.Bottom - frameHeight);
+
+            int hitboxHeight = 10;
+            Hitbox = new Rectangle((int)position.X, rect.Bottom - hitboxHeight, frameWidth, hitboxHeight);
+
+            unpressedRect = new Rectangle(7 * frameWidth, 0, frameWidth, frameHeight);
+            pressedRect = new Rectangle(6 * frameWidth, 0, frameWidth, frameHeight);
+        }
 
         public void Update(Player player, List<Box> boxes)
         {
@@ -45,7 +57,9 @@ namespace FinalProject
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            spriteBatch.Draw(texture, Hitbox, IsPressed ? activeColor : inactiveColor);
+            Rectangle sourceRect = IsPressed ? pressedRect : unpressedRect;
+            Rectangle drawRect = new Rectangle((int)position.X, (int)position.Y, frameWidth, frameHeight);
+            spriteBatch.Draw(texture, drawRect, sourceRect, Color.White);
         }
     }
 }

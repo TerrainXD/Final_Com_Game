@@ -29,6 +29,7 @@ namespace FinalProject.Managers
 
         private Texture2D maceTexture;
         private Texture2D maceBlockTexture;
+        private Texture2D plateTexture;
 
         private Texture2D bgBrown;
         private Texture2D bgGray;
@@ -43,8 +44,10 @@ namespace FinalProject.Managers
         public int currentLevel = 1;
         public int maxLevel = 2;
 
-        public Rectangle exitDoor;
+        public ExitDoor exitDoor;
         public bool hasExitDoor;
+
+        private Texture2D portalTexture;
 
         public GameManager()
         {
@@ -74,6 +77,8 @@ namespace FinalProject.Managers
             dashTexture = content.Load<Texture2D>("Item/Veil");
             wallJumpTexture = content.Load<Texture2D>("Item/shoe");
             boxTexture = content.Load<Texture2D>("Item/Box");
+            plateTexture = content.Load<Texture2D>("Item/plate");
+            portalTexture = content.Load<Texture2D>("Item/exit_door");
 
 
             playerAnimations = new Dictionary<Player.PlayerState, Animation>()
@@ -119,7 +124,11 @@ namespace FinalProject.Managers
             itemManager.Update(player);
             particleManager.Update();
 
-            if (hasExitDoor && player.Hitbox.Intersects(exitDoor))
+            if (hasExitDoor)
+            {
+                exitDoor.Update(gameTime);
+            }
+            if (hasExitDoor && player.Hitbox.Intersects(exitDoor.Hitbox))
             {
                 currentLevel++;
                 LoadLevel();
@@ -165,7 +174,7 @@ namespace FinalProject.Managers
                 return;
             }
 
-            if (hasExitDoor && player.Hitbox.Intersects(exitDoor))
+            if (hasExitDoor && player.Hitbox.Intersects(exitDoor.Hitbox))
             {
                 if (currentLevel < maxLevel)
                 {
@@ -189,7 +198,7 @@ namespace FinalProject.Managers
             foreach (var hazard in hazards) hazard.Draw(spriteBatch);
             foreach (var mace in swingingHazards) mace.Draw(spriteBatch);
             foreach (var plate in plates) plate.Draw(spriteBatch);
-            if (hasExitDoor) spriteBatch.Draw(dummyTexture, exitDoor, Color.Gold);
+            if (hasExitDoor) exitDoor.Draw(spriteBatch);
             itemManager.Draw(spriteBatch);
             particleManager.Draw(spriteBatch);
             player.Draw(spriteBatch);
@@ -246,7 +255,7 @@ namespace FinalProject.Managers
                         "8...............[1]...{444}............8",
                         "8P...B..........{4}...{444}............8",
                         "0000............{4}...{444}............8",
-                        "8888000.........{4}...{444}............8",
+                        "8888000.A.......{4}...{444}............8",
                         "888888800.......{4}...{444}....000000008",
                         "888888888WXXXXXX888XXX88888XXXX888888888", // <--- พื้นเป็นหนามถาวร (X)
                         "8888888888888888888888888888888888888888",
@@ -370,13 +379,13 @@ namespace FinalProject.Managers
                         ceilingHazard.IsUpsideDown = true;
                         hazards.Add(ceilingHazard);
                     }
-                    else if (tile == 'T') plates.Add(new PressurePlate(rect, dummyTexture, 1));
+                    else if (tile == 'A') plates.Add(new PressurePlate(rect, plateTexture, 1));
                     // else if (tile == '3') platforms.Add(new Platform(rect, TimeState.Permanent, dummyTexture, 1));
-                    else if (tile == 'A') plates.Add(new PressurePlate(rect, dummyTexture, 1));
+                    // else if (tile == 'A') plates.Add(new PressurePlate(rect, dummyTexture, 1));
                     else if (tile == 'H') itemManager.AddHeart(rect);
                     else if (tile == 'D')
                     {
-                        exitDoor = rect;
+                        exitDoor = new ExitDoor(rect, portalTexture);
                         hasExitDoor = true;
                     }
                     else if (tile == 'O' || tile == 'o') // Handle both Normal and 360 modes
@@ -425,6 +434,9 @@ namespace FinalProject.Managers
             swingingHazards.Clear();
             itemManager.hearts.Clear();
             hasExitDoor = false;
+            exitDoor = null;
+            plates.Clear();
+            hazards.Clear();
 
             // 2. ดึงแผนที่ทั้ง 2 เลเยอร์มา
             var maps = GetLevelDesign(currentLevel);
