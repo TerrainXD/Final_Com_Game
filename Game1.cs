@@ -28,7 +28,7 @@ public class Game1 : Game
     protected override void Initialize()
     {
         gameManager = new GameManager();
-        camera = new Camera();
+        camera = new Camera(GraphicsDevice.Viewport);
         base.Initialize();
     }
 
@@ -52,22 +52,30 @@ public class Game1 : Game
 
         InputManager.Update();
         gameManager.Update(gameTime);
-        camera.Follow(gameManager.player, GraphicsDevice);
+        if (gameManager.player != null && !gameManager.player.IsDead)
+        {
+            camera.Update(gameManager.player.Position,
+            gameManager.MapWidth, gameManager.MapHeight);
+        }
 
         base.Update(gameTime);
     }
 
     protected override void Draw(GameTime gameTime)
     {
-        // เปลี่ยนสีพื้นหลังตามกาลเวลาเพื่อบอกผู้เล่น
         GraphicsDevice.Clear(gameManager.currentTime == TimeState.Present ? Color.CornflowerBlue : Color.DarkSlateBlue);
+        spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: camera.Transform);
 
-        spriteBatch.Begin(samplerState: SamplerState.PointClamp);
         gameManager.DrawBackground(spriteBatch);
+        gameManager.Draw(spriteBatch);
+
         spriteBatch.End();
 
-        spriteBatch.Begin(transformMatrix: camera.Transform, samplerState: SamplerState.PointClamp);
-        gameManager.Draw(spriteBatch);
+
+        spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+
+        // UI
+
         spriteBatch.End();
 
         base.Draw(gameTime);
