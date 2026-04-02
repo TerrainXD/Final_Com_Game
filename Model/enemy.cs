@@ -11,23 +11,46 @@ namespace FinalProject
         public Vector2 Velocity;
         public Rectangle Hitbox => new Rectangle((int)Position.X, (int)Position.Y, 32, 32);
 
+        // TimeState Properties
+        public TimeState EnemyTimeState { get; private set; }
+        public bool IsDangerous { get; private set; }
+        private bool isVisible;
+
         private float speed = 2f;
         private Texture2D texture;
         private bool movingRight = false;
 
-        public Enemy(Vector2 startPos, Texture2D tex)
+        // Added TimeState to the constructor
+        public Enemy(Vector2 startPos, Texture2D tex, TimeState timeState)
         {
             Position = startPos;
             texture = tex;
             Velocity = new Vector2(-speed, 0); // Start moving left
+            EnemyTimeState = timeState;
         }
 
-        public void Update(List<Platform> platforms, List<Box> boxes)
+        // Added TimeState currentTime parameter
+        public void Update(List<Platform> platforms, List<Box> boxes, TimeState currentTime)
         {
-            // 1. Move horizontally
+            // 1. Time state logic
+            if (EnemyTimeState == TimeState.Permanent || EnemyTimeState == currentTime)
+            {
+                IsDangerous = true;
+                isVisible = true;
+            }
+            else
+            {
+                IsDangerous = false;
+                isVisible = false;
+            }
+
+            // Do not move or check collisions if the enemy is not currently active
+            if (!IsDangerous) return;
+
+            // 2. Move horizontally
             Position.X += Velocity.X;
 
-            // 2. Collision and Ledge Detection
+            // 3. Collision and Ledge Detection
             bool groundBelowFront = false;
 
             // Define a point in front of the enemy, slightly below its feet
@@ -52,7 +75,7 @@ namespace FinalProject
                 }
             }
 
-            // 3. If there's no ground in front, turn around to "stick" to the platform
+            // 4. If there's no ground in front, turn around to "stick" to the platform
             if (!groundBelowFront)
             {
                 ReverseDirection();
@@ -80,7 +103,11 @@ namespace FinalProject
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            spriteBatch.Draw(texture, Hitbox, Color.Red);
+            // Only draw if the enemy is in the current time state
+            if (isVisible)
+            {
+                spriteBatch.Draw(texture, Hitbox, Color.Red);
+            }
         }
     }
 }
