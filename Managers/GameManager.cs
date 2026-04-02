@@ -17,6 +17,7 @@ namespace FinalProject.Managers
         public List<PressurePlate> plates;
         public List<Hazard> hazards;
         public List<SwingingHazard> swingingHazards;
+        public List<SawHazard> saws;
         public TimeState currentTime;
         private Texture2D dummyTexture;
         private Texture2D terrainTexture;
@@ -33,6 +34,8 @@ namespace FinalProject.Managers
         private Texture2D plateTexture;
         private Texture2D slimeTexture;
         private Texture2D movingPlatformTexture;
+        private Texture2D sawTexture;
+        private Texture2D chainTexture;
 
         private Texture2D bgBrown;
         private Texture2D bgGray;
@@ -65,6 +68,9 @@ namespace FinalProject.Managers
             swingingHazards = new List<SwingingHazard>();
             plates = new List<PressurePlate>();
             currentTime = TimeState.Present;
+            swingingHazards = new List<SwingingHazard>();
+            saws = new List<SawHazard>();
+            currentTime = TimeState.Present;
         }
 
         public void LoadContent(ContentManager content, Texture2D dummy)
@@ -88,6 +94,8 @@ namespace FinalProject.Managers
             spearTexture = content.Load<Texture2D>("Item/Spear");
             slimeTexture = content.Load<Texture2D>("Enemy/Slime");
             movingPlatformTexture = content.Load<Texture2D>("Item/movingPlatform");
+            sawTexture = content.Load<Texture2D>("Enemy/Saw");
+            chainTexture = content.Load<Texture2D>("Enemy/Chain");
 
 
 
@@ -152,6 +160,15 @@ namespace FinalProject.Managers
                     player.TakeDamage(pushDir);
                 }
             }
+            foreach (var saw in saws)
+            {
+                saw.Update(currentTime, gameTime);
+                if (saw.IsDangerous && player.Hitbox.Intersects(saw.Hitbox))
+                {
+                    int pushDir = (player.Position.X < saw.Position.X) ? -1 : 1;
+                    player.TakeDamage(pushDir);
+                }
+            }
 
             foreach (var hazard in hazards)
             {
@@ -208,6 +225,8 @@ namespace FinalProject.Managers
             foreach (var hazard in hazards) hazard.Draw(spriteBatch);
             foreach (var mace in swingingHazards) mace.Draw(spriteBatch);
             foreach (var plate in plates) plate.Draw(spriteBatch);
+            foreach (var mace in swingingHazards) mace.Draw(spriteBatch);
+            foreach (var saw in saws) saw.Draw(spriteBatch);
             if (hasExitDoor) exitDoor.Draw(spriteBatch);
             itemManager.Draw(spriteBatch);
             particleManager.Draw(spriteBatch);
@@ -262,13 +281,13 @@ namespace FinalProject.Managers
                         "8.................................B...F....................8",
                         "8.[111]............[11]...............J....................8",
                         "8.{444}............{44}..........[11].A....................8",
-                        "8.{444}............{44}..........{44[11]...................8",
+                        "8.{444}...........S{44}..........{44[11]...................8",
                         "8.........z.......<{44}.......[11]44444}...................8",
                         "8.................<{44}.......{44444444}...................8",
                         "8..................{44}................B...................8",
-                        "8[1]...............{44}....................................8",
+                        "8[1]..S.......H....{44}....................................8",
                         "8{4}...............{44}.......[11111111]...........[111111]8",
-                        "8{4}...............{44}.......{44444444}...........{444444}8",
+                        "8{4}..........G....{44}.......{44444444}...........{444444}8",
                         "8{4}...........[11]{44}....................................8",
                         "8{4[1]TTTTTTTTT{444444}XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX8",
                         "800000000000000000000000000000000000000000000000000000000008",
@@ -532,7 +551,6 @@ namespace FinalProject.Managers
                     else if (tile == 'A') plates.Add(new PressurePlate(rect, plateTexture, 1));
                     // else if (tile == '3') platforms.Add(new Platform(rect, TimeState.Permanent, dummyTexture, 1));
                     // else if (tile == 'A') plates.Add(new PressurePlate(rect, dummyTexture, 1));
-                    else if (tile == 'H') itemManager.AddHeart(rect);
                     else if (tile == 'D')
                     {
                         exitDoor = new ExitDoor(rect, portalTexture);
@@ -579,6 +597,37 @@ namespace FinalProject.Managers
                         // This makes the block "platformable" using your existing logic
                         platforms.Add(new Platform(platformRect, hazardState, terrainTexture, sourceRect));
                     }
+                    // =========================================
+                    // ✨ กงจักรเลื่อย (S = อยู่เฉยๆ, H = แนวนอน, V = แนวตั้ง)
+                    // =========================================
+                    else if (tile == 'S' || tile == 's' || tile == 'H' || tile == 'h' || tile == 'G' || tile == 'g')
+                    {
+                        // รูป 38x38 ใหญ่กว่าช่องกริด 32x32 นิดหน่อย จึงต้องขยับแกน XY ถอยไป -3 เพื่อให้อยู่กึ่งกลางบล็อกพอดี
+                        Vector2 startPos = new Vector2(x * tileSize - 20, y * tileSize - 20);
+
+                        TimeState hazardState = tile switch
+                        {
+                            'S' or 'H' or 'G' => TimeState.Present,
+                            's' or 'h' or 'g' => TimeState.Past,
+                            _ => TimeState.Permanent
+                        };
+
+                        SawHazard saw = new SawHazard(startPos, hazardState, sawTexture, chainTexture);
+
+                        // ตั้งค่าการเคลื่อนที่ (ถ้าระบุ H หรือ V)
+                        if (tile == 'H' || tile == 'h')
+                        {
+                            // เลื่อนแนวนอนไปทางขวา 6 บล็อก ความเร็ว 2f
+                            saw.SetMoving(new Vector2(startPos.X + (6 * tileSize), startPos.Y), 2f);
+                        }
+                        else if (tile == 'G' || tile == 'g')
+                        {
+                            // เลื่อนแนวตั้งลงข้างล่าง 5 บล็อก ความเร็ว 2f
+                            saw.SetMoving(new Vector2(startPos.X, startPos.Y + (5 * tileSize)), 2f);
+                        }
+
+                        saws.Add(saw);
+                    }
                     else if (tile == 'G') itemManager.AddPowerUp(rect, ItemManager.ItemType.DoubleJump);
                     else if (tile == 'F') itemManager.AddPowerUp(rect, ItemManager.ItemType.Dash);
                     else if (tile == 'J') itemManager.AddPowerUp(rect, ItemManager.ItemType.WallJump);
@@ -602,6 +651,9 @@ namespace FinalProject.Managers
             exitDoor = null;
             plates.Clear();
             hazards.Clear();
+            enemies.Clear();
+            swingingHazards.Clear();
+            saws.Clear();
 
             // 2. ดึงแผนที่ทั้ง 2 เลเยอร์มา
             var maps = GetLevelDesign(currentLevel);
