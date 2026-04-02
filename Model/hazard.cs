@@ -26,7 +26,6 @@ return isVisible && currentFrame >= 1 && currentFrame <= 6;
     private Rectangle sourceRect;
     private float scaleX = 1.0f;
     private float scaleY = 4.5f;
-    private Texture2D debugTexture;
 
    private float GetHeightMultiplier()
     {
@@ -140,14 +139,6 @@ return isVisible && currentFrame >= 1 && currentFrame <= 6;
 
             spriteBatch.Draw(texture, drawRect, sourceRect, Color.White, 0f, Vector2.Zero, flipEffect, 0f);
 
-            if (debugTexture == null)
-            {
-                debugTexture = new Texture2D(spriteBatch.GraphicsDevice, 1, 1);
-                debugTexture.SetData(new[] { Color.Red * 0.5f }); // สีแดงแบบโปร่งแสง 50%
-            }
-            
-            // วาดกล่องแดงให้เห็นกันชัดๆ
-            spriteBatch.Draw(debugTexture, Hitbox, Color.White);
         }
     }
 }

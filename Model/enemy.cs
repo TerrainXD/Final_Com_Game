@@ -1,7 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
-using System;
 
 namespace FinalProject
 {
@@ -9,30 +8,64 @@ namespace FinalProject
     {
         public Vector2 Position;
         public Vector2 Velocity;
-        public Rectangle Hitbox => new Rectangle((int)Position.X, (int)Position.Y, 32, 32);
-
-        // TimeState Properties
         public TimeState EnemyTimeState { get; private set; }
         public bool IsDangerous { get; private set; }
-        private bool isVisible;
+        public bool isVisible { get; private set; }
 
-        private float speed = 2f;
+        private float speed = 1.2f;
+        private float gravity = 0.5f;
+        private bool isGrounded = false;
         private Texture2D texture;
         private bool movingRight = false;
 
-        // Added TimeState to the constructor
+        // --- ตั้งค่า Animation ---
+        private int currentFrame;
+        private int totalFrames = 2;
+        private int frameWidth;
+        private int frameHeight;
+        private float frameTimer;
+        private float frameInterval = 0.2f;
+        private Rectangle sourceRect;
+        
+        private int drawWidth;
+        private int drawHeight;
+
+        // ==========================================
+        // ✨ ปรับขนาดสไลม์ (Scale)
+        // ==========================================
+        private float scale = 2.5f; // ปรับเลขนี้ให้ใหญ่ขึ้นตามต้องการ
+
+        private int offsetX = 10;
+        private int offsetY => drawHeight / 2; 
+        private int emptyBottomSpace => (int)(2 * scale); 
+
+        public Rectangle Hitbox => new Rectangle(
+            (int)Position.X + offsetX, 
+            (int)Position.Y + offsetY, 
+            drawWidth - (offsetX * 2), 
+            (drawHeight / 2) - emptyBottomSpace
+        );
+
         public Enemy(Vector2 startPos, Texture2D tex, TimeState timeState)
         {
-            Position = startPos;
             texture = tex;
-            Velocity = new Vector2(-speed, 0); // Start moving left
+            Velocity = new Vector2(-speed, 0);
             EnemyTimeState = timeState;
+
+            // ✨ คำนวณขนาดเฟรมและขนาดที่จะวาด
+            frameWidth = texture.Width / 4;
+            frameHeight = texture.Height / 3;
+            drawWidth = (int)(frameWidth * scale);
+            drawHeight = (int)(frameHeight * scale);
+
+            // ปรับตำแหน่งเกิดให้ไม่จมดิน
+            Position = new Vector2(startPos.X, startPos.Y - (drawHeight - 32));
+            sourceRect = new Rectangle(0, 0, frameWidth, frameHeight);
         }
 
-        // Added TimeState currentTime parameter
-        public void Update(List<Platform> platforms, List<Box> boxes, TimeState currentTime)
+        public void Update(GameTime gameTime, List<Platform> platforms, List<Box> boxes, TimeState currentTime)
         {
-            // 1. Time state logic
+            // ตรวจสอบมิติเวลา
             if (EnemyTimeState == TimeState.Permanent || EnemyTimeState == currentTime)
             {
                 IsDangerous = true;
@@ -44,55 +77,68 @@ namespace FinalProject
                 isVisible = false;
             }
 
-            // Do not move or check collisions if the enemy is not currently active
             if (!IsDangerous) return;
 
-            // 2. Move horizontally
-            Position.X += Velocity.X;
+            // รันแอนิเมชัน
+            frameTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (frameTimer > frameInterval)
+            {
+                currentFrame = (currentFrame + 1) % totalFrames;
+                frameTimer = 0f;
+                sourceRect = new Rectangle(currentFrame * frameWidth, 0, frameWidth, frameHeight);
+            }
 
-            // 3. Collision and Ledge Detection
-            bool groundBelowFront = false;
+            // แรงโน้มถ่วง
+            Velocity.Y += gravity;
+            Position.Y += Velocity.Y;
+            isGrounded = false;
 
-            // Define a point in front of the enemy, slightly below its feet
-            Vector2 frontEdgeCheck = movingRight 
-                ? new Vector2(Hitbox.Right + 1, Hitbox.Bottom + 1) 
-                : new Vector2(Hitbox.Left - 1, Hitbox.Bottom + 1);
-
+            // เช็คชนพื้น (แกน Y)
             foreach (var platform in platforms)
             {
                 if (!platform.IsSolid) continue;
-
-                // Wall Collision: Turn around if hitting a side
                 if (Hitbox.Intersects(platform.Hitbox))
                 {
-                    HandleCollision(platform.Hitbox);
+                    if (Velocity.Y > 0 && Hitbox.Bottom - Velocity.Y <= platform.Hitbox.Top)
+                    {
+                        Position.Y = platform.Hitbox.Top - Hitbox.Height - offsetY;
+                        Velocity.Y = 0;
+                        isGrounded = true;
+                    }
                 }
+            }
 
-                // Ledge Detection: Check if this platform is under our "front edge"
-                if (platform.Hitbox.Contains(frontEdgeCheck))
+            // เดินซ้าย-ขวา (แกน X)
+            Position.X += Velocity.X;
+            bool groundBelowFront = false;
+            float sensorX = movingRight ? Hitbox.Right + 5 : Hitbox.Left - 5;
+            Vector2 sensorPoint = new Vector2(sensorX, Hitbox.Bottom + 5);
+
+            // เช็คชนกำแพง/ขอบเหว
+            foreach (var platform in platforms)
+            {
+                if (!platform.IsSolid) continue;
+                if (Hitbox.Intersects(platform.Hitbox))
                 {
-                    groundBelowFront = true;
+                    if (movingRight) Position.X -= (Hitbox.Right - platform.Hitbox.Left);
+                    else Position.X += (platform.Hitbox.Right - Hitbox.Left);
+                    ReverseDirection();
+                }
+                if (platform.Hitbox.Contains(sensorPoint)) groundBelowFront = true;
+            }
+
+            // ✨ เช็คเดินชนกล่อง (Boxes)
+            foreach (var box in boxes)
+            {
+                if (Hitbox.Intersects(box.Hitbox))
+                {
+                    if (movingRight) Position.X -= (Hitbox.Right - box.Hitbox.Left);
+                    else Position.X += (box.Hitbox.Right - Hitbox.Left);
+                    ReverseDirection();
                 }
             }
 
-            // 4. If there's no ground in front, turn around to "stick" to the platform
-            if (!groundBelowFront)
-            {
-                ReverseDirection();
-            }
-        }
-
-        private void HandleCollision(Rectangle obstacle)
-        {
-            if (movingRight)
-            {
-                Position.X = obstacle.Left - Hitbox.Width;
-            }
-            else
-            {
-                Position.X = obstacle.Right;
-            }
-            ReverseDirection();
+            if (isGrounded && !groundBelowFront) ReverseDirection();
         }
 
         private void ReverseDirection()
@@ -101,12 +147,17 @@ namespace FinalProject
             Velocity.X = movingRight ? speed : -speed;
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, TimeState currentTime)
         {
-            // Only draw if the enemy is in the current time state
             if (isVisible)
             {
-                spriteBatch.Draw(texture, Hitbox, Color.Red);
+                Rectangle drawRect = new Rectangle((int)Position.X, (int)Position.Y, drawWidth, drawHeight);
+                SpriteEffects flip = movingRight ? SpriteEffects.FlipHorizontally : SpriteEffects.None;
+                
+                // ✨ ✨ ✨ เงื่อนไขเปลี่ยนสี: ถ้าเป็น Past ให้เป็นสีส้ม ✨ ✨ ✨
+                Color slimeColor = (currentTime == TimeState.Past) ? Color.Orange : Color.White;
+
+                spriteBatch.Draw(texture, drawRect, sourceRect, slimeColor, 0f, Vector2.Zero, flip, 0f);
             }
         }
     }

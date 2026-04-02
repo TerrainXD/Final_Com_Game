@@ -31,6 +31,7 @@ namespace FinalProject.Managers
         private Texture2D maceTexture;
         private Texture2D maceBlockTexture;
         private Texture2D plateTexture;
+        private Texture2D slimeTexture;
 
         private Texture2D bgBrown;
         private Texture2D bgGray;
@@ -84,6 +85,7 @@ namespace FinalProject.Managers
             plateTexture = content.Load<Texture2D>("Item/plate");
             portalTexture = content.Load<Texture2D>("Item/exit_door");
             spearTexture = content.Load<Texture2D>("Item/Spear");
+            slimeTexture = content.Load<Texture2D>("Enemy/Slime");
 
 
             playerAnimations = new Dictionary<Player.PlayerState, Animation>()
@@ -121,7 +123,7 @@ namespace FinalProject.Managers
             foreach (var spike in spikes) spike.Update(currentTime);
             foreach (var hazard in hazards) hazard.Update(currentTime, gameTime);
             foreach (var box in boxes) box.Update(platforms, player);
-            foreach (var enemy in enemies) enemy.Update(platforms, boxes, currentTime);
+            foreach (var enemy in enemies) enemy.Update(gameTime,platforms, boxes, currentTime);
             foreach (var plate in plates) plate.Update(player, boxes);
 
             player.Update(platforms, boxes, particleManager);
@@ -199,7 +201,7 @@ namespace FinalProject.Managers
             foreach (var platform in platforms) platform.Draw(spriteBatch);
             foreach (var spike in spikes) spike.Draw(spriteBatch);
             foreach (var box in boxes) box.Draw(spriteBatch);
-            foreach (var enemy in enemies) enemy.Draw(spriteBatch);
+            foreach (var enemy in enemies) enemy.Draw(spriteBatch, currentTime);
             foreach (var hazard in hazards) hazard.Draw(spriteBatch);
             foreach (var mace in swingingHazards) mace.Draw(spriteBatch);
             foreach (var plate in plates) plate.Draw(spriteBatch);
@@ -447,12 +449,12 @@ namespace FinalProject.Managers
                     else if (tile == 'E') // Present Enemy
                     {
                         Vector2 enemyPos = new Vector2(x * tileSize, (y * tileSize) + 32);
-                        enemies.Add(new Enemy(enemyPos, dummyTexture, TimeState.Present)); 
+                        enemies.Add(new Enemy(enemyPos, slimeTexture, TimeState.Present)); 
                     }
                     else if (tile == 'e') // Past Enemy
                     {
                         Vector2 enemyPos = new Vector2(x * tileSize, (y * tileSize) + 32);
-                        enemies.Add(new Enemy(enemyPos, dummyTexture, TimeState.Past)); 
+                        enemies.Add(new Enemy(enemyPos, slimeTexture, TimeState.Past)); 
                     }
                     else if (tile == 'W')
                     {
