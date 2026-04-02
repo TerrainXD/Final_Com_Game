@@ -32,6 +32,7 @@ namespace FinalProject.Managers
         private Texture2D maceBlockTexture;
         private Texture2D plateTexture;
         private Texture2D slimeTexture;
+        private Texture2D movingPlatformTexture;
 
         private Texture2D bgBrown;
         private Texture2D bgGray;
@@ -86,6 +87,8 @@ namespace FinalProject.Managers
             portalTexture = content.Load<Texture2D>("Item/exit_door");
             spearTexture = content.Load<Texture2D>("Item/Spear");
             slimeTexture = content.Load<Texture2D>("Enemy/Slime");
+            movingPlatformTexture = content.Load<Texture2D>("Item/movingPlatform");
+
 
 
             playerAnimations = new Dictionary<Player.PlayerState, Animation>()
@@ -119,7 +122,7 @@ namespace FinalProject.Managers
                 currentTime = (currentTime == TimeState.Present) ? TimeState.Past : TimeState.Present;
             }
 
-            foreach (var platform in platforms) platform.Update(currentTime, plates); ;
+            foreach (var platform in platforms) platform.Update(currentTime, plates, gameTime); ;
             foreach (var spike in spikes) spike.Update(currentTime);
             foreach (var hazard in hazards) hazard.Update(currentTime, gameTime);
             foreach (var box in boxes) box.Update(platforms, player);
@@ -252,9 +255,9 @@ namespace FinalProject.Managers
                         "8..........................................................8",
                         "8..........................................................8",
                         "8..........................................................8",
-                        "8..........................................................8",
+                        "8........................-.......*.........................8",
                         "8.........P................................................8",
-                        "8..........................................................8",
+                        "8........................=.......+.........................8",
                         "8.....E...z...........................G....................8",
                         "8.................................B...F....................8",
                         "8.[111]............[11]...............J....................8",
@@ -475,6 +478,34 @@ namespace FinalProject.Managers
                         }
 
                         spikes.Add(new Spike(spikeHitbox, drawRect, TimeState.Permanent, spikesTexture, rotation, origin));
+                    }
+                    else if (tile == '=' || tile == '+' || tile == '-' || tile == '*')
+                    {
+                        int platWidth = 40 * 3;
+                        Rectangle movingRect = new Rectangle(x * tileSize, y * tileSize + (tileSize - 10), platWidth, 20);
+                        Rectangle sourceRect = new Rectangle(0, 0, 32, 10);
+
+                        TimeState platState = tile switch
+                        {
+                            '=' or '-' => TimeState.Present,
+                            '+' or '*' => TimeState.Past,
+                            _ => TimeState.Permanent
+                        };
+
+                        float distanceX = tile switch
+                        {
+                            '=' or '+' => 8 * tileSize,
+                            '-' or '*' => -8 * tileSize,
+                            _ => 0
+                        };
+
+                        float speed = 3f;
+
+                        Platform movingPlat = new Platform(movingRect, platState, movingPlatformTexture, sourceRect);
+                        movingPlat.SetMoving(distanceX, speed);
+                        movingPlat.SetAnimation(4, 32, 10, 0.15f);
+
+                        platforms.Add(movingPlat);
                     }
                     else if (tile == 'P') player = new Player(new Vector2(x * tileSize, y * tileSize), playerAnimations);
                     else if (tile == 'B') boxes.Add(new Box(new Vector2(x * tileSize, y * tileSize), boxTexture));
