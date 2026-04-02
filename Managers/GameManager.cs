@@ -158,7 +158,7 @@ namespace FinalProject.Managers
 
             foreach (var mace in swingingHazards)
             {
-                mace.Update(gameTime);
+                mace.Update(gameTime, currentTime);
                 if (player.Hitbox.Intersects(mace.Hitbox))
                 {
                     int pushDir = (player.Position.X < mace.HeadPosition.X) ? -1 : 1;
@@ -260,8 +260,8 @@ namespace FinalProject.Managers
                         "8.................................B.........{44}........8888",
                         "8...................O.......................{44}........8888",
                         "8.................[1111]....................{44}........8888",
-                        "8.................{4444}....................{44}........8888",
-                        "8......[11].....................[1111]......{44}........8888",
+                        "8.......X.........{4444}....................{44}........8888",
+                        "8.B....[11].....................[1111]......{44}........8888",
                         "8......{44}.......T.............{4444}......{44}........8888",
                         "8......{44}.....[1111]..........{4444}......{44}........8888",
                         "8P..A..{44}.....{4444}..........{4444}......{44}........8888",
@@ -281,7 +281,7 @@ namespace FinalProject.Managers
                         "............................................................",
                         "............................................................",
                         "............................................................",
-                        "............................................................",
+                        ".......C...c................................................",
                         "............................................................",
                         "............................................................",
                         "............................................................",
@@ -403,34 +403,50 @@ namespace FinalProject.Managers
                         exitDoor = new ExitDoor(rect, portalTexture);
                         hasExitDoor = true;
                     }
-                    else if (tile == 'O' || tile == 'o') // Handle both Normal and 360 modes
+                    else if (tile == 'Z' || tile == 'z' || tile == 'C' || tile == 'c' || tile == 'V' || tile == 'v') // Handle both Normal and 360 modes
                     {
                         // 1. Calculate Positions
                         Vector2 anchorPos = new Vector2(rect.Center.X, rect.Top);
                         Rectangle platformRect = new Rectangle(rect.X, rect.Y, 32, 32); // Standard tile size
                         Rectangle sourceRect = new Rectangle(192, 16, 16, 16); // Your stone/block texture
 
-                        // 2. Create and add the Swinging Hazard
-                        if (tile == 'O') // Normal Mode
+                        TimeState hazardState;
+                        switch (tile)
                         {
-                            var mace = new SwingingHazard(anchorPos, 2.0f, 150f, maceTexture, dummyTexture);
+                            case 'Z' or 'z':
+                                hazardState = TimeState.Present;
+                                break;
+                            case 'C' or 'c':
+                                hazardState = TimeState.Past;
+                                break;
+                            default:
+                                hazardState = TimeState.Permanent;
+                                break;
+                        }
+
+                        // Z 180 present z 360 present
+                        // C 180 past c 360 past
+                        // V 180 permanent v 360 permanent
+                        // 2. Create and add the Swinging Hazard
+                        if (tile == 'Z' || tile == 'C' || tile == 'V') // Normal Mode
+                        {
+                            var mace = new SwingingHazard(anchorPos, 2.0f, 150f, maceTexture, dummyTexture, hazardState);
                             mace.IsFullRotation = false;
                             swingingHazards.Add(mace);
                         }
-                        else if (tile == 'o') // 360 Mode
+                        else if (tile == 'z' || tile == 'c' || tile == 'v') // 360 Mode
                         {
-                            var mace = new SwingingHazard(anchorPos, 2.5f, 100f, maceTexture, dummyTexture);
+                            var mace = new SwingingHazard(anchorPos, 2.5f, 100f, maceTexture, dummyTexture, hazardState);
                             mace.IsFullRotation = true;
                             swingingHazards.Add(mace);
                         }
                         // 3. ADD THIS: Create a solid platform at the same spot
                         // This makes the block "platformable" using your existing logic
-                        platforms.Add(new Platform(platformRect, TimeState.Permanent, terrainTexture, sourceRect));
+                        platforms.Add(new Platform(platformRect, hazardState, terrainTexture, sourceRect));
                     }
                     else if (tile == 'G') itemManager.AddPowerUp(rect, ItemManager.ItemType.DoubleJump);
                     else if (tile == 'F') itemManager.AddPowerUp(rect, ItemManager.ItemType.Dash);
                     else if (tile == 'J') itemManager.AddPowerUp(rect, ItemManager.ItemType.WallJump);
-
                 }
             }
         }
