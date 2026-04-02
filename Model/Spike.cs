@@ -12,12 +12,17 @@ public class Spike
 
     private Texture2D texture;
 
-    public Spike(Rectangle hitbox, Rectangle drawRect, TimeState timeState, Texture2D tex)
+    public float Rotatin { get; set; }
+    public Vector2 Origin { get; set; }
+
+    public Spike(Rectangle hitbox, Rectangle drawRect, TimeState timeState, Texture2D tex, float rotation = 0f, Vector2? origin = null)
     {
         Hitbox = hitbox;
         DrawRect = drawRect;
         SpikeTimeState = timeState;
         texture = tex;
+        Rotatin = rotation;
+        Origin = origin ?? Vector2.Zero;
     }
 
     public void Update(TimeState currentTime)
@@ -39,7 +44,7 @@ public class Spike
     {
         if (isVisible)
         {
-            spriteBatch.Draw(texture, DrawRect, Color.White);
+            spriteBatch.Draw(texture, DrawRect, null, Color.White, Rotatin, Origin, SpriteEffects.None, 0f);
         }
     }
 }

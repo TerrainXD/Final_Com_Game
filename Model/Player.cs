@@ -221,7 +221,7 @@ public class Player
                 }
             }
 
-            bool isWallSliding = (CanWallJump && isTouchingLeftWall || isTouchingRightWall) && Velocity.Y > 0 && !isDashing; // Add CanWallJump Later
+            bool isWallSliding = (CanWallJump && (isTouchingLeftWall || isTouchingRightWall)) && Velocity.Y > 0 && !isDashing; // Add CanWallJump Later
 
 
             // ==========================================
