@@ -248,6 +248,36 @@
 /processorParam:TextureFormat=Color
 /build:PlayerModel/Wall_Jump.png
 
+#begin Sound/dead.mp3
+/importer:Mp3Importer
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Sound/dead.mp3
+
+#begin Sound/enterExit.mp3
+/importer:Mp3Importer
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Sound/enterExit.mp3
+
+#begin Sound/jump.mp3
+/importer:Mp3Importer
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Sound/jump.mp3
+
+#begin Sound/pickup.mp3
+/importer:Mp3Importer
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Sound/pickup.mp3
+
+#begin Sound/swift.mp3
+/importer:Mp3Importer
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Sound/swift.mp3
+
 #begin Spike/Block.png
 /importer:TextureImporter
 /processor:TextureProcessor

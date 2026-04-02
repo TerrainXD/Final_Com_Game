@@ -1,4 +1,5 @@
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -45,6 +46,13 @@ namespace FinalProject.Managers
         public ItemManager itemManager;
         public UIManager uiManager;
         public ParticleManager particleManager;
+        public VFXManager vfxManager;
+        private SoundEffect pickupSound;
+        private SoundEffect jumpSound;
+        private SoundEffect shiftSound;
+        private SoundEffect exitSound;
+        private SoundEffect deadSound;
+
         private Dictionary<Player.PlayerState, Animation> playerAnimations;
 
         public int currentLevel = 1;
@@ -96,6 +104,13 @@ namespace FinalProject.Managers
             movingPlatformTexture = content.Load<Texture2D>("Item/movingPlatform");
             sawTexture = content.Load<Texture2D>("Enemy/Saw");
             chainTexture = content.Load<Texture2D>("Enemy/Chain");
+            pickupSound = content.Load<SoundEffect>("Sound/pickup");
+            jumpSound = content.Load<SoundEffect>("Sound/jump");
+            shiftSound = content.Load<SoundEffect>("Sound/swift");
+            exitSound = content.Load<SoundEffect>("Sound/enterExit");
+            deadSound = content.Load<SoundEffect>("Sound/dead");
+
+
 
 
 
@@ -111,9 +126,10 @@ namespace FinalProject.Managers
                 { Player.PlayerState.Die, new Animation(content.Load<Texture2D>("PlayerModel/Hit"), 7, false)},
             };
 
-            itemManager = new ItemManager(heartTex);
+            itemManager = new ItemManager(heartTex, pickupSound);
             uiManager = new UIManager(font, heartTex);
             particleManager = new ParticleManager();
+            vfxManager = new VFXManager(particleManager, dummyTexture);
             itemManager.powerUpTextures[ItemManager.ItemType.DoubleJump] = doubleJumpTexture;
             itemManager.powerUpTextures[ItemManager.ItemType.Dash] = dashTexture;
             itemManager.powerUpTextures[ItemManager.ItemType.WallJump] = wallJumpTexture;
@@ -128,6 +144,7 @@ namespace FinalProject.Managers
             if (InputManager.IsKeyPressed(Keys.LeftControl))
             {
                 currentTime = (currentTime == TimeState.Present) ? TimeState.Past : TimeState.Present;
+                shiftSound.Play(0.5f, 0f, 0f);
             }
 
             foreach (var platform in platforms) platform.Update(currentTime, plates, gameTime); ;
@@ -139,17 +156,13 @@ namespace FinalProject.Managers
 
             player.Update(platforms, boxes, particleManager);
             player.CheckSpikeCollision(spikes);
-            itemManager.Update(player);
+            itemManager.Update(player, vfxManager);
             particleManager.Update();
+
 
             if (hasExitDoor)
             {
                 exitDoor.Update(gameTime);
-            }
-            if (hasExitDoor && player.Hitbox.Intersects(exitDoor.Hitbox))
-            {
-                currentLevel++;
-                LoadLevel();
             }
 
             foreach (var enemy in enemies)
@@ -190,19 +203,23 @@ namespace FinalProject.Managers
                 }
             }
 
+            if (player.Position.Y > MapHeight + 200)
+            {
+                player.Die();
+            }
+
             if (player.IsDead)
             {
-                LoadLevel();
-                return;
-            }
-            if (player.Position.Y > 1000)
-            {
-                LoadLevel();
+                if (InputManager.IsKeyPressed(Keys.Enter))
+                {
+                    LoadLevel();
+                }
                 return;
             }
 
             if (hasExitDoor && player.Hitbox.Intersects(exitDoor.Hitbox))
             {
+                exitSound.Play(0.2f, 0f, 0f);
                 if (currentLevel < maxLevel)
                 {
                     currentLevel++;
@@ -277,10 +294,10 @@ namespace FinalProject.Managers
                         "8........................-.......*.........................8",
                         "8.........P................................................8",
                         "8........................=.......+.........................8",
-                        "8.....E...z...........................G....................8",
-                        "8.................................B...F....................8",
-                        "8.[111]............[11]...............J....................8",
-                        "8.{444}............{44}..........[11].A....................8",
+                        "8.....E...z...............................................8",
+                        "8...D.............................B.......................8",
+                        "8.[111]............[11]...................................8",
+                        "8.{444}..Y..F..J...{44}..........[11].A....................8",
                         "8.{444}...........S{44}..........{44[11]...................8",
                         "8.........z.......<{44}.......[11]44444}...................8",
                         "8.................<{44}.......{44444444}...................8",
@@ -526,7 +543,7 @@ namespace FinalProject.Managers
 
                         platforms.Add(movingPlat);
                     }
-                    else if (tile == 'P') player = new Player(new Vector2(x * tileSize, y * tileSize), playerAnimations);
+                    else if (tile == 'P') player = new Player(new Vector2(x * tileSize, y * tileSize), playerAnimations, jumpSound, deadSound);
                     else if (tile == 'B') boxes.Add(new Box(new Vector2(x * tileSize, y * tileSize), boxTexture));
                     else if (tile == 'E')
                     {
@@ -628,7 +645,7 @@ namespace FinalProject.Managers
 
                         saws.Add(saw);
                     }
-                    else if (tile == 'G') itemManager.AddPowerUp(rect, ItemManager.ItemType.DoubleJump);
+                    else if (tile == 'Y') itemManager.AddPowerUp(rect, ItemManager.ItemType.DoubleJump);
                     else if (tile == 'F') itemManager.AddPowerUp(rect, ItemManager.ItemType.Dash);
                     else if (tile == 'J') itemManager.AddPowerUp(rect, ItemManager.ItemType.WallJump);
                 }

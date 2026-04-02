@@ -74,8 +74,10 @@ public class Game1 : Game
 
         spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-        // UI
-
+        if (gameManager.player != null && gameManager.player.IsDead)
+        {
+            gameManager.uiManager.DrawGameOver(spriteBatch, 1280, 720);
+        }
         spriteBatch.End();
 
         base.Draw(gameTime);

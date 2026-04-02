@@ -42,7 +42,6 @@ namespace FinalProject
                 currentlyOccupied = true;
             }
 
-            // Check if any box is sitting on it
             foreach (var box in boxes)
             {
                 if (box.Hitbox.Intersects(Hitbox))

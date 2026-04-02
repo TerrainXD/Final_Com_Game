@@ -12,8 +12,10 @@ public class Particle
     public Color ParticleColor;
     public float FadeRate;
 
+    public Vector2 ExactPosition;
+    public Vector2 Velocity;
 
-    public Particle(Rectangle drawRect, Rectangle source, SpriteEffects flip, Texture2D tex, Color color, float startOpacity = 0.6f, float fadeRate = 0.05f)
+    public Particle(Rectangle drawRect, Rectangle source, SpriteEffects flip, Texture2D tex, Color color, float startOpacity = 0.6f, float fadeRate = 0.05f, Vector2 velocity = default)
     {
         DrawRect = drawRect;
         SourceRect = source;
@@ -22,10 +24,15 @@ public class Particle
         ParticleColor = color;
         Opacity = startOpacity;
         FadeRate = fadeRate;
+        ExactPosition = new Vector2(drawRect.X, drawRect.Y);
+        Velocity = velocity;
     }
 
     public void Update()
     {
+        ExactPosition += Velocity;
+        DrawRect.X = (int)ExactPosition.X;
+        DrawRect.Y = (int)ExactPosition.Y;
         Opacity -= FadeRate;
     }
 

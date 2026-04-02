@@ -10,7 +10,6 @@ namespace FinalProject
         public Vector2 HeadPosition; 
         public Rectangle Hitbox;
         
-        // TimeState Properties
         public TimeState HazardTimeState { get; private set; }
         public bool IsDangerous { get; private set; }
         private bool isVisible;
@@ -24,7 +23,6 @@ namespace FinalProject
         private Texture2D dummyTexture;
         public bool IsFullRotation = false;
 
-        // Updated constructor to include TimeState
         public SwingingHazard(Vector2 anchor, float moveSpeed, float chainLength, Texture2D tex, Texture2D dummy, TimeState timeState)
         {
             Anchor = anchor;
@@ -36,18 +34,15 @@ namespace FinalProject
             HeadPosition = new Vector2(Anchor.X, Anchor.Y + length);
         }
 
-        // Updated Update method to include currentTime check
         public void Update(GameTime gameTime, TimeState currentTime)
         {
             if (gameTime == null) return;
 
-            // Logic matching the Spike class behavior
             if (HazardTimeState == TimeState.Permanent || HazardTimeState == currentTime)
             {
                 IsDangerous = true;
                 isVisible = true;
 
-                // Only calculate movement if the hazard is active/visible
                 float totalSeconds = (float)gameTime.TotalGameTime.TotalSeconds;
 
                 if (IsFullRotation)
@@ -69,17 +64,14 @@ namespace FinalProject
             {
                 IsDangerous = false;
                 isVisible = false;
-                // Optionally reset Hitbox to empty when not dangerous
                 Hitbox = Rectangle.Empty;
             }
         }
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            // Only draw if visible based on TimeState
             if (isVisible)
             {
-                // 1. Draw the Chain
                 float distance = Vector2.Distance(Anchor, HeadPosition);
                 float chainRotation = (float)Math.Atan2(HeadPosition.Y - Anchor.Y, HeadPosition.X - Anchor.X);
 

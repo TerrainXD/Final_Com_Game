@@ -1,5 +1,6 @@
 using FinalProject.Managers;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
@@ -55,12 +56,14 @@ public class Player
     private PlayerState currentState = PlayerState.Idle;
     private Dictionary<PlayerState, Animation> animations;
     private Animation currentAnimation;
+    private SoundEffect jumpSound;
+    private SoundEffect deadSound;
 
     private int currentFrame = 0;
     private int frameDelay = 6;
     private int frameCounter = 0;
     private bool facingRight = true;
-    public Player(Vector2 startPos, Dictionary<PlayerState, Animation> anims)
+    public Player(Vector2 startPos, Dictionary<PlayerState, Animation> anims, SoundEffect jumpSfx, SoundEffect deadSfx)
     {
         Position = startPos;
         SpawnPoint = startPos;
@@ -68,6 +71,8 @@ public class Player
 
         animations = anims;
         currentAnimation = animations[PlayerState.Idle];
+        jumpSound = jumpSfx;
+        deadSound = deadSfx;
     }
 
     public void Heal(int amount)
@@ -100,7 +105,9 @@ public class Player
 
     public void Die()
     {
+        if (IsDead) return;
         IsDead = true;
+        deadSound.Play(0.25f, 0f, 0f);
     }
 
     public void PushOutHorizontally(List<Platform> platforms)
@@ -231,7 +238,10 @@ public class Player
             if (justPressedSpace && stunTimer <= 0 && !isDashing)
             {
                 if (isGrounded)
+                {
                     Velocity.Y = jumpForce;
+                    jumpSound.Play(0.2f, 0f, 0f);
+                }
                 else if (isTouchingLeftWall && CanWallJump) // Can WallJump Later
                 {
                     Velocity.Y = jumpForce;
@@ -239,6 +249,7 @@ public class Player
                     forcedDirection = 1f;
                     Velocity.X = wallJumpForce;
                     isWallSliding = false;
+                    jumpSound.Play(0.2f, -0.2f, 0f);
                 }
                 else if (isTouchingRightWall && CanWallJump) // Can WallJump Later
                 {
@@ -247,11 +258,13 @@ public class Player
                     forcedDirection = -1f;
                     Velocity.X = -wallJumpForce;
                     isWallSliding = false;
+                    jumpSound.Play(0.2f, -0.2f, 0f);
                 }
                 else if (CanDoubleJump && !isGrounded && !isDoubleJump) // Add CanDoubleJump check here LATER
                 {
                     Velocity.Y = jumpForce;
                     isDoubleJump = true;
+                    jumpSound.Play(0.2f, 0.2f, 0f);
                 }
             }
 
