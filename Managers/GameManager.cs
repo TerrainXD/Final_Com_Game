@@ -27,6 +27,7 @@ namespace FinalProject.Managers
         private Texture2D wallJumpTexture;
         private Texture2D boxTexture;
 
+        private Texture2D spearTexture;
         private Texture2D maceTexture;
         private Texture2D maceBlockTexture;
         private Texture2D plateTexture;
@@ -82,6 +83,7 @@ namespace FinalProject.Managers
             boxTexture = content.Load<Texture2D>("Item/Box");
             plateTexture = content.Load<Texture2D>("Item/plate");
             portalTexture = content.Load<Texture2D>("Item/exit_door");
+            spearTexture = content.Load<Texture2D>("Item/Spear");
 
 
             playerAnimations = new Dictionary<Player.PlayerState, Animation>()
@@ -117,7 +119,7 @@ namespace FinalProject.Managers
 
             foreach (var platform in platforms) platform.Update(currentTime, plates); ;
             foreach (var spike in spikes) spike.Update(currentTime);
-            foreach (var hazard in hazards) hazard.Update(gameTime, currentTime);
+            foreach (var hazard in hazards) hazard.Update(currentTime, gameTime);
             foreach (var box in boxes) box.Update(platforms, player);
             foreach (var enemy in enemies) enemy.Update(platforms, boxes);
             foreach (var plate in plates) plate.Update(player, boxes);
@@ -264,7 +266,7 @@ namespace FinalProject.Managers
                         "8.B....[11].....................[1111]......{44}........8888",
                         "8......{44}.......T.............{4444}......{44}........8888",
                         "8......{44}.....[1111]..........{4444}......{44}........8888",
-                        "8P..A..{44}.....{4444}..........{4444}......{44}........8888",
+                        "8P..A.W{44}.....{4444}..........{4444}......{44}........8888",
                         "00000000000XXXXX0000000XXXXX0000000000XXXXXX0000000000008888",
                         "888888888888888888888888888888888888888888888888888888888888",
                         "888888888888888888888888888888888888888888888888888888888888",
@@ -385,12 +387,12 @@ namespace FinalProject.Managers
                     else if (tile == 'W')
                     {
                         // Normal floor hazard
-                        hazards.Add(new Hazard(new Vector2(x * tileSize, y * tileSize), TimeState.Permanent, dummyTexture));
+                        hazards.Add(new Hazard(new Vector2(x * tileSize, y * tileSize), TimeState.Permanent, spearTexture));
                     }
                     else if (tile == 'M')
                     {
                         // Ceiling hazard (Upside Down)
-                        var ceilingHazard = new Hazard(new Vector2(x * tileSize, y * tileSize), TimeState.Permanent, dummyTexture);
+                        var ceilingHazard = new Hazard(new Vector2(x * tileSize, y * tileSize), TimeState.Permanent, spearTexture);
                         ceilingHazard.IsUpsideDown = true;
                         hazards.Add(ceilingHazard);
                     }

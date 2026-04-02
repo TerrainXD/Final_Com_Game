@@ -80,6 +80,18 @@
 /processorParam:TextureFormat=Color
 /build:Item/shoe.png
 
+#begin Item/Spear.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Item/Spear.png
+
 #begin Item/Veil.png
 /importer:TextureImporter
 /processor:TextureProcessor

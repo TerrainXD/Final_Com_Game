@@ -152,7 +152,7 @@ public class Player
             // ==========================================
             // 2. รับ Input แกน X และ Dash
             // ==========================================
-            if (InputManager.IsKeyPressed(Keys.LeftShift) && dashCooldownTimer <= 0 && stunTimer <= 0) // Add CanDash Later
+            if (InputManager.IsKeyPressed(Keys.LeftShift) && dashCooldownTimer <= 0 && stunTimer <= 0 && CanDash) // Add CanDash Later
             {
                 isDashing = true;
                 dashTimer = dashDuration;
@@ -221,7 +221,7 @@ public class Player
                 }
             }
 
-            bool isWallSliding = (isTouchingLeftWall || isTouchingRightWall) && Velocity.Y > 0 && !isDashing; // Add CanWallJump Later
+            bool isWallSliding = (CanWallJump && isTouchingLeftWall || isTouchingRightWall) && Velocity.Y > 0 && !isDashing; // Add CanWallJump Later
 
 
             // ==========================================
@@ -232,7 +232,7 @@ public class Player
             {
                 if (isGrounded)
                     Velocity.Y = jumpForce;
-                else if (isTouchingLeftWall) // Can WallJump Later
+                else if (isTouchingLeftWall && CanWallJump) // Can WallJump Later
                 {
                     Velocity.Y = jumpForce;
                     wallJumpTimer = wallJumpLockTime;
@@ -240,7 +240,7 @@ public class Player
                     Velocity.X = wallJumpForce;
                     isWallSliding = false;
                 }
-                else if (isTouchingRightWall) // Can WallJump Later
+                else if (isTouchingRightWall && CanWallJump) // Can WallJump Later
                 {
                     Velocity.Y = jumpForce;
                     wallJumpTimer = wallJumpLockTime;
@@ -248,7 +248,7 @@ public class Player
                     Velocity.X = -wallJumpForce;
                     isWallSliding = false;
                 }
-                else if (!isGrounded && !isDoubleJump) // Add CanDoubleJump check here LATER
+                else if (CanDoubleJump && !isGrounded && !isDoubleJump) // Add CanDoubleJump check here LATER
                 {
                     Velocity.Y = jumpForce;
                     isDoubleJump = true;
