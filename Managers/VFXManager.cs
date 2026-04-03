@@ -20,7 +20,7 @@ namespace FinalProject.Managers
 
         public void CreateItemPickupEffect(Rectangle itemHitbox, Color effectColor)
         {
-            int particleCount = 15; 
+            int particleCount = 15;
             Vector2 center = new Vector2(itemHitbox.Center.X, itemHitbox.Center.Y);
 
             for (int i = 0; i < particleCount; i++)
@@ -43,7 +43,7 @@ namespace FinalProject.Managers
                     effectColor,
                     1.0f,
                     fadeRate,
-                    velocity 
+                    velocity
                 );
 
                 particleManager.AddParticle(p);

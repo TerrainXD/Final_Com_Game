@@ -18,7 +18,6 @@ namespace FinalProject
         private Texture2D texture;
         private bool movingRight = false;
 
-        // --- ตั้งค่า Animation ---
         private int currentFrame;
         private int totalFrames = 2;
         private int frameWidth;
@@ -30,10 +29,7 @@ namespace FinalProject
         private int drawWidth;
         private int drawHeight;
 
-        // ==========================================
-        // ✨ ปรับขนาดสไลม์ (Scale)
-        // ==========================================
-        private float scale = 2.5f; // ปรับเลขนี้ให้ใหญ่ขึ้นตามต้องการ
+        private float scale = 2.5f; 
 
         private int offsetX = 10;
         private int offsetY => drawHeight / 2; 
@@ -52,13 +48,11 @@ namespace FinalProject
             Velocity = new Vector2(-speed, 0);
             EnemyTimeState = timeState;
 
-            // ✨ คำนวณขนาดเฟรมและขนาดที่จะวาด
             frameWidth = texture.Width / 4;
             frameHeight = texture.Height / 3;
             drawWidth = (int)(frameWidth * scale);
             drawHeight = (int)(frameHeight * scale);
 
-            // ปรับตำแหน่งเกิดให้ไม่จมดิน
             Position = new Vector2(startPos.X, startPos.Y - (drawHeight - 32));
             sourceRect = new Rectangle(0, 0, frameWidth, frameHeight);
         }
@@ -79,7 +73,6 @@ namespace FinalProject
 
             if (!IsDangerous) return;
 
-            // รันแอนิเมชัน
             frameTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (frameTimer > frameInterval)
             {
@@ -88,12 +81,10 @@ namespace FinalProject
                 sourceRect = new Rectangle(currentFrame * frameWidth, 0, frameWidth, frameHeight);
             }
 
-            // แรงโน้มถ่วง
             Velocity.Y += gravity;
             Position.Y += Velocity.Y;
             isGrounded = false;
 
-            // เช็คชนพื้น (แกน Y)
             foreach (var platform in platforms)
             {
                 if (!platform.IsSolid) continue;
@@ -108,13 +99,11 @@ namespace FinalProject
                 }
             }
 
-            // เดินซ้าย-ขวา (แกน X)
             Position.X += Velocity.X;
             bool groundBelowFront = false;
             float sensorX = movingRight ? Hitbox.Right + 5 : Hitbox.Left - 5;
             Vector2 sensorPoint = new Vector2(sensorX, Hitbox.Bottom + 5);
 
-            // เช็คชนกำแพง/ขอบเหว
             foreach (var platform in platforms)
             {
                 if (!platform.IsSolid) continue;
@@ -127,7 +116,6 @@ namespace FinalProject
                 if (platform.Hitbox.Contains(sensorPoint)) groundBelowFront = true;
             }
 
-            // ✨ เช็คเดินชนกล่อง (Boxes)
             foreach (var box in boxes)
             {
                 if (Hitbox.Intersects(box.Hitbox))
@@ -154,7 +142,6 @@ namespace FinalProject
                 Rectangle drawRect = new Rectangle((int)Position.X, (int)Position.Y, drawWidth, drawHeight);
                 SpriteEffects flip = movingRight ? SpriteEffects.FlipHorizontally : SpriteEffects.None;
                 
-                // ✨ ✨ ✨ เงื่อนไขเปลี่ยนสี: ถ้าเป็น Past ให้เป็นสีส้ม ✨ ✨ ✨
                 Color slimeColor = (currentTime == TimeState.Past) ? Color.Orange : Color.White;
 
                 spriteBatch.Draw(texture, drawRect, sourceRect, slimeColor, 0f, Vector2.Zero, flip, 0f);

@@ -26,8 +26,10 @@ namespace FinalProject
         private Vector2 startPos;
         private Vector2 endPos;
         private float speed;
-        private float moveProgress = 0f; 
+        private float moveProgress = 0f;
         private int moveDir = 1;
+
+        private static System.Random rand = new System.Random();
 
         public Rectangle Hitbox => new Rectangle(
                   (int)Position.X + (int)(offsetX * scale),
@@ -45,6 +47,8 @@ namespace FinalProject
             texture = tex;
             chainTexture = chainTex;
             isMoving = false;
+            moveProgress = (float)rand.NextDouble();
+            moveDir = rand.Next(2) == 0 ? 1 : -1;
         }
 
 
@@ -87,12 +91,12 @@ namespace FinalProject
                 if (moveProgress >= 1f)
                 {
                     moveProgress = 1f;
-                    moveDir = -1; 
+                    moveDir = -1;
                 }
                 else if (moveProgress <= 0f)
                 {
                     moveProgress = 0f;
-                    moveDir = 1; 
+                    moveDir = 1;
                 }
 
                 Position = Vector2.Lerp(startPos, endPos, moveProgress);

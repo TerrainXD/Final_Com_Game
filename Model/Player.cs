@@ -12,18 +12,15 @@ public class Player
     public Vector2 Position;
     public Vector2 Velocity;
     public Rectangle Hitbox => new Rectangle((int)Position.X, (int)Position.Y, 32, 32);
-
     private float speed = 5f;
     private float gravity = 0.5f;
     private float jumpForce = -12f;
     private float wallJumpForce = 6f;
     private bool isGrounded;
-    private int wallJumpTimer = 0;     // ตัวนับเวลาพุ่ง
+    private int wallJumpTimer = 0;    
     private float wallSlideWall = 2f;
-    private int wallJumpLockTime = 12; // ระยะเวลาล็อคปุ่ม (12 เฟรม = ประมาณ 0.2 วินาที)
-    private float forcedDirection = 0f;// ทิศทางที่ถูกบังคับพุ่ง (ซ้ายหรือขวา)
-
-    // --- Dash Variables ---
+    private int wallJumpLockTime = 12; 
+    private float forcedDirection = 0f;
     private float dashSpeed = 25f;
     private int dashDuration = 10;
     private int dashCooldown = 40;
@@ -37,14 +34,12 @@ public class Player
     public bool IsDead = false;
 
 
-    //check has power up
     public bool CanDoubleJump = false;
     public bool CanDash = false;
     public bool CanWallJump = false;
     private Texture2D texture;
 
     public Vector2 SpawnPoint;
-    public Vector2 VisualPosition;
 
     //Animation
     public enum PlayerState { Idle, Running, Jumping, Falling, DoubleJumping, WallClinging, Hurt, Die, Dashing }
@@ -62,8 +57,6 @@ public class Player
     {
         Position = startPos;
         SpawnPoint = startPos;
-        VisualPosition = startPos;
-
         animations = anims;
         currentAnimation = animations[PlayerState.Idle];
         jumpSound = jumpSfx;
@@ -86,22 +79,17 @@ public class Player
     {
         foreach (var platform in platforms)
         {
-            // If the platform is solid and the box is currently overlapping it
             if (platform.IsSolid && Hitbox.Intersects(platform.Hitbox))
             {
-                // Calculate how much the box is overlapping on the left and right sides
                 float pushLeftDist = Hitbox.Right - platform.Hitbox.Left;
                 float pushRightDist = platform.Hitbox.Right - Hitbox.Left;
 
-                // Push the box in the direction that has the shortest distance to escape
                 if (pushLeftDist < pushRightDist)
                 {
-                    // It's closer to the left edge, so push it Left
                     Position.X -= pushLeftDist;
                 }
                 else
                 {
-                    // It's closer to the right edge, so push it Right
                     Position.X += pushRightDist;
                 }
             }
@@ -116,15 +104,11 @@ public class Player
             return;
         }
         {
-            // ==========================================
-            // 1. จัดการ Timer (Dash, อมตะ, สตัน)
-            // ==========================================
+
             if (dashCooldownTimer > 0) dashCooldownTimer--;
 
-            // ==========================================
-            // 2. รับ Input แกน X และ Dash
-            // ==========================================
-            if (InputManager.IsKeyPressed(Keys.LeftShift) && dashCooldownTimer <= 0 && CanDash) // Add CanDash Later
+
+            if (InputManager.IsKeyPressed(Keys.LeftShift) && dashCooldownTimer <= 0 && CanDash) 
             {
                 isDashing = true;
                 dashTimer = dashDuration;
@@ -155,10 +139,6 @@ public class Player
                 if (dashTimer <= 0) isDashing = false;
             }
 
-
-            // ==========================================
-            // 3. เรดาร์เช็คสภาพแวดล้อม (ต้องทำก่อนไปคำนวณแอนิเมชัน)
-            // ==========================================
             Rectangle groundCheck = new Rectangle((int)Position.X, (int)Position.Y + 1, Hitbox.Width, Hitbox.Height);
             isGrounded = false;
 
@@ -175,7 +155,6 @@ public class Player
             Rectangle rightCheck = new Rectangle((int)Position.X + 1, (int)Position.Y, Hitbox.Width, Hitbox.Height);
             isTouchingRightWall = false;
 
-            // ✨ แก้บั๊กสั่น: "จะเกาะกำแพงได้ ต้องลอยอยู่กลางอากาศเท่านั้น" (ไม่เช็คเรดาร์กำแพงถ้าเหยียบพื้นอยู่)
             if (!isGrounded)
             {
                 foreach (var platform in platforms)
@@ -193,12 +172,9 @@ public class Player
                 }
             }
 
-            bool isWallSliding = (CanWallJump && (isTouchingLeftWall || isTouchingRightWall)) && Velocity.Y > 0 && !isDashing; // Add CanWallJump Later
+            bool isWallSliding = (CanWallJump && (isTouchingLeftWall || isTouchingRightWall)) && Velocity.Y > 0 && !isDashing; 
 
 
-            // ==========================================
-            // 4. ลอจิกการกระโดด
-            // ==========================================
             bool justPressedSpace = InputManager.IsKeyPressed(Keys.Space);
             if (justPressedSpace && !isDashing)
             {
@@ -207,7 +183,7 @@ public class Player
                     Velocity.Y = jumpForce;
                     jumpSound.Play(0.2f, 0f, 0f);
                 }
-                else if (isTouchingLeftWall && CanWallJump) // Can WallJump Later
+                else if (isTouchingLeftWall && CanWallJump)
                 {
                     Velocity.Y = jumpForce;
                     wallJumpTimer = wallJumpLockTime;
@@ -216,7 +192,7 @@ public class Player
                     isWallSliding = false;
                     jumpSound.Play(0.2f, -0.2f, 0f);
                 }
-                else if (isTouchingRightWall && CanWallJump) // Can WallJump Later
+                else if (isTouchingRightWall && CanWallJump) 
                 {
                     Velocity.Y = jumpForce;
                     wallJumpTimer = wallJumpLockTime;
@@ -225,18 +201,13 @@ public class Player
                     isWallSliding = false;
                     jumpSound.Play(0.2f, -0.2f, 0f);
                 }
-                else if (CanDoubleJump && !isGrounded && !isDoubleJump) // Add CanDoubleJump check here LATER
+                else if (CanDoubleJump && !isGrounded && !isDoubleJump)
                 {
                     Velocity.Y = jumpForce;
                     isDoubleJump = true;
                     jumpSound.Play(0.2f, 0.2f, 0f);
                 }
             }
-
-
-            // ==========================================
-            // 5. แรงโน้มถ่วง และ อัปเดตตำแหน่ง + การชน
-            // ==========================================
             if (!isDashing)
             {
                 if (isWallSliding) Velocity.Y = wallSlideWall;
@@ -248,14 +219,6 @@ public class Player
 
             Position.Y += Velocity.Y;
             CheckCollision(platforms, boxes, false);
-
-            VisualPosition.X = MathHelper.Lerp(VisualPosition.X, Position.X, 0.2f);
-            VisualPosition.Y = MathHelper.Lerp(VisualPosition.Y, Position.Y, 0.2f);
-
-
-            // ==========================================
-            // 6. ระบบแอนิเมชัน (ย้ายมาไว้ล่างสุด เพื่อให้ได้ค่าตำแหน่งล่าสุดเป๊ะๆ)
-            // ==========================================
             if (isWallSliding)
             {
                 if (isTouchingLeftWall) facingRight = false;
@@ -311,8 +274,8 @@ public class Player
                 Rectangle sourceRect = new Rectangle(currentFrame * currentAnimation.FrameWidth, 0, currentAnimation.FrameWidth, currentAnimation.FrameHeight);
 
                 Rectangle drawRect = new Rectangle(
-                    (int)VisualPosition.X + (Hitbox.Width / 2) - (drawWidth / 2),
-                    (int)VisualPosition.Y + Hitbox.Height - drawHeight,
+                    (int)Position.X + (Hitbox.Width / 2) - (drawWidth / 2),
+                    (int)Position.Y + Hitbox.Height - drawHeight,
                     drawWidth,
                     drawHeight);
 
@@ -324,7 +287,6 @@ public class Player
     }
     private void CheckCollision(List<Platform> platforms, List<Box> boxes, bool isHorizontal)
     {
-        // 1. เช็คการชนกับพื้น/กำแพง (Platform)
         foreach (var platform in platforms)
         {
             if (platform.IsSolid && Hitbox.Intersects(platform.Hitbox))
@@ -333,22 +295,17 @@ public class Player
             }
         }
 
-        // 2. เช็คการชนกับกล่อง (Box) **ต้องแยกออกมาเป็นอีกลูปนึง**
         foreach (var box in boxes)
         {
             if (Hitbox.Intersects(box.Hitbox))
             {
                 if (isHorizontal)
                 {
-                    // ดันกล่องไปตามความเร็วของตัวละคร
                     box.TryPush(Velocity.X, platforms);
-
-                    // หยุดตัวละครไม่ให้เดินทะลุกล่อง
                     ResolveCollision(box.Hitbox, true);
                 }
                 else
                 {
-                    // ถ้าหล่นลงมาทับกล่อง (แกน Y) ให้เหยียบกล่องได้เหมือนเป็นพื้นปกติ
                     ResolveCollision(box.Hitbox, false);
                 }
             }
@@ -397,16 +354,14 @@ public class Player
         float scale = 1.5f;
         int drawWidth = (int)(currentAnimation.FrameWidth * scale);
         int drawHeight = (int)(currentAnimation.FrameHeight * scale);
-        //หากรอบตัดภาพ Sprite
+        
         Rectangle sourceRect = new Rectangle(currentFrame * currentAnimation.FrameWidth, 0, currentAnimation.FrameWidth, currentAnimation.FrameHeight);
-        // หาตำแหน่งวาด (ปรับ Offset ให้อยู่ตรงกลาง Hitbox นิดหน่อย)
         Rectangle drawRect = new Rectangle(
-            (int)VisualPosition.X + (Hitbox.Width / 2) - (drawWidth / 2),
-            (int)VisualPosition.Y + Hitbox.Height - drawHeight,
+            (int)Position.X + (Hitbox.Width / 2) - (drawWidth / 2),
+            (int)Position.Y + Hitbox.Height - drawHeight,
             drawWidth,
             drawHeight);
 
-        // ถ้าหันซ้าย ให้พลิกภาพ
         SpriteEffects flipEffect = facingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
         spriteBatch.Draw(currentAnimation.Texture, drawRect, sourceRect, drawColor, 0f, Vector2.Zero, flipEffect, 0f);
     }

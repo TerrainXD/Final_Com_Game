@@ -36,7 +36,6 @@ public class Game1 : Game
     {
         spriteBatch = new SpriteBatch(GraphicsDevice);
 
-        // สร้าง Texture สีขาวชั่วคราวสำหรับแพลตฟอร์มและตัวละคร
         dummyTexture = new Texture2D(GraphicsDevice, 1, 1);
         dummyTexture.SetData(new[] { Color.White });
 
@@ -63,21 +62,36 @@ public class Game1 : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(gameManager.currentTime == TimeState.Present ? Color.CornflowerBlue : Color.DarkSlateBlue);
         spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: camera.Transform);
-
         gameManager.DrawBackground(spriteBatch);
-        gameManager.Draw(spriteBatch);
-
+        if (gameManager.State == GameManager.GameState.Playing || gameManager.State == GameManager.GameState.GameWon)
+        {
+            gameManager.Draw(spriteBatch);
+        }
         spriteBatch.End();
+
 
 
         spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-        if (gameManager.player != null && gameManager.player.IsDead)
+        switch (gameManager.State)
         {
-            gameManager.uiManager.DrawGameOver(spriteBatch, 1280, 720);
+            case GameManager.GameState.MainMenu:
+                gameManager.uiManager.DrawMainMenu(spriteBatch, Mouse.GetState());
+                break;
+
+            case GameManager.GameState.Playing:
+                if (gameManager.player != null && gameManager.player.IsDead)
+                {
+                    gameManager.uiManager.DrawGameOver(spriteBatch, Mouse.GetState());
+                }
+                break;
+
+            case GameManager.GameState.GameWon:
+                gameManager.uiManager.DrawGameWon(spriteBatch, Mouse.GetState(), gameManager.totalPlayTime, gameManager.totalFailed);
+                break;
         }
+
         spriteBatch.End();
 
         base.Draw(gameTime);

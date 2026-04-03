@@ -31,27 +31,19 @@ return isVisible && currentFrame >= 1 && currentFrame <= 6;
     {
         switch (currentFrame)
         {
-            // 🚀 ขาขึ้น (พุ่งอย่างไว)
             case 0: return 0.0f;  
             case 1: return 0.60f; 
             case 2: return 0.85f; 
             case 3: return 0.95f; 
-            
-            // 🛑 ค้างไว้แป๊บเดียว
             case 4: return 0.95f; 
             case 5: return 0.95f; 
-            
-            // ⏬ ขาลง (แก้ตรงนี้! สั่งให้หดเร็วขึ้น)
-            case 6: return 0.40f; // เฟรม 6: ภาพเริ่มหด กล่องก็หดตามทันทีเหลือ 40%
-            
-            // เฟรม 7-11: ภาพมิดดินไปแล้ว สั่ง 0.0f ให้หมด!
+            case 6: return 0.40f; 
             case 7: return 0.0f;  
             case 8: return 0.0f;  
             case 9: return 0.0f;  
             case 10: return 0.0f; 
             case 11: return 0.0f; 
-            
-            default: return 0.0f; // ค่า default ให้เป็น 0 ไว้ก่อนชัวร์สุดครับ
+            default: return 0.0f; 
         }
     }
   public Rectangle Hitbox
@@ -85,7 +77,7 @@ return isVisible && currentFrame >= 1 && currentFrame <= 6;
         sourceRect = new Rectangle(0, 0, frameWidth, frameHeight);
     }
 
-      public void Update(TimeState currentTime, GameTime gameTime)
+    public void Update(TimeState currentTime, GameTime gameTime)
     {
         if (HazardTimeState == TimeState.Permanent || HazardTimeState == currentTime)
         {
@@ -96,7 +88,6 @@ return isVisible && currentFrame >= 1 && currentFrame <= 6;
             isVisible = false;
         }
 
-        // รันแอนิเมชันเฉพาะตอนที่มองเห็น
         if (isVisible)
         {
             elapsedTime += (float)gameTime.ElapsedGameTime.TotalSeconds;

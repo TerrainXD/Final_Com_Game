@@ -75,30 +75,26 @@ public class Platform
 
     public void Update(TimeState currentTime, List<PressurePlate> plates, GameTime gameTime)
     {
-        // ✨ ถ้าเป็นบล็อกถาวร หรือเป็นบล็อกตรงกับมิติเวลาปัจจุบัน
         if (PlatformTimeState == TimeState.Permanent || PlatformTimeState == currentTime)
         {
-            IsSolid = true;     // ชนได้ เหยียบได้
-            IsVisible = true;   // มองเห็นได้
+            IsSolid = true;
+            IsVisible = true;   
         }
         else
         {
-            // ✨ ถ้าอยู่คนละมิติเวลา
-            IsSolid = false;    // ทะลุผ่านเลย
-            IsVisible = false;  // หายวับไปจากหน้าจอ!
+        
+            IsSolid = false;  
+            IsVisible = false; 
         }
 
-        // 2. Check Pressure Plate Logic (ID System)
         if (RequiredPlateID != -1)
         {
-            // Find the plate that matches this platform's ID
             var linkedPlate = plates.Find(p => p.PlateID == RequiredPlateID);
 
-            // If the plate exists and is NOT pressed, the platform stays non-solid
             if (linkedPlate != null && linkedPlate.IsPressed)
             {
                 IsSolid = false;
-                IsVisible = false; // Add this so it hides visually too
+                IsVisible = false;
             }
         }
 
@@ -109,7 +105,6 @@ public class Platform
             {
                 currentFrame = (currentFrame + 1) % totalFrames;
                 frameTimer = 0f;
-                // อัปเดตกรอบตัดภาพให้เลื่อนไปเฟรมถัดไป
                 sorceRect = new Rectangle(currentFrame * frameWidth, 0, frameWidth, frameHeight);
             }
         }
@@ -118,23 +113,18 @@ public class Platform
         {
             currentX += moveSpeed * moveDirection;
 
-            // เช็คว่าชนขอบเขตหรือยัง
             if (currentX >= maxX)
             {
                 currentX = maxX;
-                moveDirection = -1; // สุดขอบขวา ให้หันกลับไปซ้าย
+                moveDirection = -1;
             }
             else if (currentX <= minX)
             {
                 currentX = minX;
-                moveDirection = 1; // สุดขอบซ้าย ให้หันกลับไปขวา
+                moveDirection = 1;
             }
-
-            // อัปเดตตำแหน่ง Hitbox
+            
             Hitbox = new Rectangle((int)currentX, Hitbox.Y, Hitbox.Width, Hitbox.Height);
-
-            // 💡 ถ้าคุณมีกล่อง DrawRect แยกไว้สำหรับวาดรูป อย่าลืมขยับมันตามด้วยแบบนี้นะครับ:
-            // DrawRect = new Rectangle((int)currentX, DrawRect.Y, DrawRect.Width, DrawRect.Height);
         }
 
 
