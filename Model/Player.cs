@@ -14,11 +14,6 @@ public class Player
     public Rectangle Hitbox => new Rectangle((int)Position.X, (int)Position.Y, 32, 32);
 
     private float speed = 5f;
-    public int HP { get; set; } = 3;
-    public int MaxHP { get; } = 3;
-    public bool isInvincible = false;
-    private int invincibilityTimer = 0;
-    private int stunTimer = 0;
     private float gravity = 0.5f;
     private float jumpForce = -12f;
     private float wallJumpForce = 6f;
@@ -75,32 +70,9 @@ public class Player
         deadSound = deadSfx;
     }
 
-    public void Heal(int amount)
-    {
-        HP += amount;
-        if (HP > MaxHP) HP = MaxHP;
-    }
-
     public void TakeDamage(int knockDuration)
     {
-        if (isInvincible) return;
-
-        HP--;
-
-        if (HP <= 0)
-        {
-            Die();
-        }
-        else
-        {
-            isInvincible = true;
-            invincibilityTimer = 90;
-            stunTimer = 15;
-
-            Velocity.Y = -6f;
-            Velocity.X = knockDuration * 6f;
-        }
-
+        Die();
     }
 
     public void Die()
@@ -148,18 +120,11 @@ public class Player
             // 1. จัดการ Timer (Dash, อมตะ, สตัน)
             // ==========================================
             if (dashCooldownTimer > 0) dashCooldownTimer--;
-            if (invincibilityTimer > 0)
-            {
-                invincibilityTimer--;
-                if (invincibilityTimer <= 0) isInvincible = false;
-            }
-            if (stunTimer > 0) stunTimer--;
-
 
             // ==========================================
             // 2. รับ Input แกน X และ Dash
             // ==========================================
-            if (InputManager.IsKeyPressed(Keys.LeftShift) && dashCooldownTimer <= 0 && stunTimer <= 0 && CanDash) // Add CanDash Later
+            if (InputManager.IsKeyPressed(Keys.LeftShift) && dashCooldownTimer <= 0 && CanDash) // Add CanDash Later
             {
                 isDashing = true;
                 dashTimer = dashDuration;
@@ -167,7 +132,7 @@ public class Player
                 dashDirection = facingRight ? 1f : -1f;
             }
 
-            if (stunTimer <= 0 && !isDashing)
+            if (!isDashing)
             {
                 if (wallJumpTimer > 0)
                 {
@@ -235,7 +200,7 @@ public class Player
             // 4. ลอจิกการกระโดด
             // ==========================================
             bool justPressedSpace = InputManager.IsKeyPressed(Keys.Space);
-            if (justPressedSpace && stunTimer <= 0 && !isDashing)
+            if (justPressedSpace && !isDashing)
             {
                 if (isGrounded)
                 {
@@ -305,7 +270,6 @@ public class Player
             PlayerState newState = PlayerState.Idle;
 
             if (IsDead) newState = PlayerState.Die;
-            else if (stunTimer > 0) newState = PlayerState.Hurt;
             else if (isDashing) newState = PlayerState.Running;
             else if (isWallSliding) newState = PlayerState.WallClinging;
             else if (!isGrounded)
@@ -429,10 +393,6 @@ public class Player
     public void Draw(SpriteBatch spriteBatch)
     {
         Color drawColor = Color.White;
-        if (isInvincible && (invincibilityTimer / 10) % 2 == 0)
-        {
-            drawColor = Color.Red * 0.5f;
-        }
 
         float scale = 1.5f;
         int drawWidth = (int)(currentAnimation.FrameWidth * scale);

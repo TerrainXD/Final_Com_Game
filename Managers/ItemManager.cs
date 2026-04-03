@@ -10,7 +10,7 @@ public class ItemManager
     public Dictionary<ItemType, Texture2D> powerUpTextures = new Dictionary<ItemType, Texture2D>();
     private Texture2D heartTexture;
     private SoundEffect pickupSound;
-    public enum ItemType { Heart, DoubleJump, Dash, WallJump }
+    public enum ItemType { DoubleJump, Dash, WallJump }
 
     public class PowerUpItem
     {
@@ -26,32 +26,13 @@ public class ItemManager
 
 
     }
-    public ItemManager(Texture2D heartTex, SoundEffect sound)
+    public ItemManager(SoundEffect sound)
     {
-        hearts = new List<Item>();
-        heartTexture = heartTex;
         pickupSound = sound;
-    }
-
-    public void AddHeart(Rectangle rec)
-    {
-        hearts.Add(new Item(rec, heartTexture));
     }
 
     public void Update(Player player, FinalProject.Managers.VFXManager vfxManager)
     {
-        for (int i = hearts.Count - 1; i >= 0; i--)
-        {
-            if (hearts[i].Hitbox.Intersects(player.Hitbox))
-            {
-                player.Heal(1);
-
-                vfxManager.CreateItemPickupEffect(hearts[i].Hitbox, Color.Red);
-                pickupSound.Play();
-
-                hearts.RemoveAt(i);
-            }
-        }
         foreach (var item in powerUps)
         {
             if (!item.IsCollected && player.Hitbox.Intersects(item.Hitbox))
@@ -70,11 +51,6 @@ public class ItemManager
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        foreach (var heart in hearts)
-        {
-            heart.Draw(spriteBatch);
-        }
-
         foreach (var item in powerUps)
         {
             if (!item.IsCollected)

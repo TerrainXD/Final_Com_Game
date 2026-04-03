@@ -12,7 +12,7 @@ namespace FinalProject
         public bool IsDangerous { get; private set; }
         public bool isVisible { get; private set; }
 
-        private float speed = 1.2f;
+        private float speed = 2.0f;
         private float gravity = 0.5f;
         private bool isGrounded = false;
         private Texture2D texture;
