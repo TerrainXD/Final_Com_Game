@@ -95,9 +95,10 @@ public class Platform
             var linkedPlate = plates.Find(p => p.PlateID == RequiredPlateID);
 
             // If the plate exists and is NOT pressed, the platform stays non-solid
-            if (linkedPlate != null && !linkedPlate.IsPressed)
+            if (linkedPlate != null && linkedPlate.IsPressed)
             {
                 IsSolid = false;
+                IsVisible = false; // Add this so it hides visually too
             }
         }
 
@@ -149,7 +150,7 @@ public class Platform
         {
             if (RequiredPlateID != -1)
             {
-                spriteBatch.Draw(texture, Hitbox, sorceRect, Color.White * 0.3f);
+                spriteBatch.Draw(texture, Hitbox, sorceRect, Color.Red * 0.0f);
             }
 
         }
