@@ -22,12 +22,11 @@ namespace FinalProject
         private float scale = 2.0f;
         private int offsetX = 6;
         private int offsetY = 6;
-        // --- ระบบ Movement ---
         private bool isMoving;
         private Vector2 startPos;
         private Vector2 endPos;
         private float speed;
-        private float moveProgress = 0f; // คำนวณระยะทางแบบ 0.0 - 1.0
+        private float moveProgress = 0f; 
         private int moveDir = 1;
 
         public Rectangle Hitbox => new Rectangle(

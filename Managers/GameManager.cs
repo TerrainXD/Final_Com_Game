@@ -1,4 +1,5 @@
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -22,7 +23,6 @@ namespace FinalProject.Managers
         private Texture2D dummyTexture;
         private Texture2D terrainTexture;
         private Texture2D spikesTexture;
-        private Texture2D heartTexture;
         private Texture2D doubleJumpTexture;
         private Texture2D dashTexture;
         private Texture2D wallJumpTexture;
@@ -45,10 +45,17 @@ namespace FinalProject.Managers
         public ItemManager itemManager;
         public UIManager uiManager;
         public ParticleManager particleManager;
+        public VFXManager vfxManager;
+        private SoundEffect pickupSound;
+        private SoundEffect jumpSound;
+        private SoundEffect shiftSound;
+        private SoundEffect exitSound;
+        private SoundEffect deadSound;
+
         private Dictionary<Player.PlayerState, Animation> playerAnimations;
 
         public int currentLevel = 1;
-        public int maxLevel = 2;
+        public int maxLevel = 4;
 
         public int MapWidth { get; private set; }
         public int MapHeight { get; private set; }
@@ -76,7 +83,6 @@ namespace FinalProject.Managers
         public void LoadContent(ContentManager content, Texture2D dummy)
         {
             dummyTexture = dummy;
-            Texture2D heartTex = content.Load<Texture2D>("Image/Heart");
             SpriteFont font = content.Load<SpriteFont>("GameFont");
             terrainTexture = content.Load<Texture2D>("Terrain/Terrain");
             spikesTexture = content.Load<Texture2D>("Spike/Idle");
@@ -96,6 +102,13 @@ namespace FinalProject.Managers
             movingPlatformTexture = content.Load<Texture2D>("Item/movingPlatform");
             sawTexture = content.Load<Texture2D>("Enemy/Saw");
             chainTexture = content.Load<Texture2D>("Enemy/Chain");
+            pickupSound = content.Load<SoundEffect>("Sound/pickup");
+            jumpSound = content.Load<SoundEffect>("Sound/jump");
+            shiftSound = content.Load<SoundEffect>("Sound/swift");
+            exitSound = content.Load<SoundEffect>("Sound/enterExit");
+            deadSound = content.Load<SoundEffect>("Sound/dead");
+
+
 
 
 
@@ -111,9 +124,10 @@ namespace FinalProject.Managers
                 { Player.PlayerState.Die, new Animation(content.Load<Texture2D>("PlayerModel/Hit"), 7, false)},
             };
 
-            itemManager = new ItemManager(heartTex);
-            uiManager = new UIManager(font, heartTex);
+            itemManager = new ItemManager(pickupSound);
+            uiManager = new UIManager(font);
             particleManager = new ParticleManager();
+            vfxManager = new VFXManager(particleManager, dummyTexture);
             itemManager.powerUpTextures[ItemManager.ItemType.DoubleJump] = doubleJumpTexture;
             itemManager.powerUpTextures[ItemManager.ItemType.Dash] = dashTexture;
             itemManager.powerUpTextures[ItemManager.ItemType.WallJump] = wallJumpTexture;
@@ -128,6 +142,7 @@ namespace FinalProject.Managers
             if (InputManager.IsKeyPressed(Keys.LeftControl))
             {
                 currentTime = (currentTime == TimeState.Present) ? TimeState.Past : TimeState.Present;
+                shiftSound.Play(0.5f, 0f, 0f);
             }
 
             foreach (var platform in platforms) platform.Update(currentTime, plates, gameTime); ;
@@ -139,17 +154,13 @@ namespace FinalProject.Managers
 
             player.Update(platforms, boxes, particleManager);
             player.CheckSpikeCollision(spikes);
-            itemManager.Update(player);
+            itemManager.Update(player, vfxManager);
             particleManager.Update();
+
 
             if (hasExitDoor)
             {
                 exitDoor.Update(gameTime);
-            }
-            if (hasExitDoor && player.Hitbox.Intersects(exitDoor.Hitbox))
-            {
-                currentLevel++;
-                LoadLevel();
             }
 
             foreach (var enemy in enemies)
@@ -190,19 +201,24 @@ namespace FinalProject.Managers
                 }
             }
 
+            if (player.Position.Y > MapHeight + 200)
+            {
+                player.Die();
+            }
+
             if (player.IsDead)
             {
-                LoadLevel();
-                return;
-            }
-            if (player.Position.Y > MapHeight + 200) // If player falls below the map, reset level
-            {
-                LoadLevel();
+                if (InputManager.IsKeyPressed(Keys.Enter))
+                {
+                    LoadLevel();
+                }
                 return;
             }
 
+
             if (hasExitDoor && player.Hitbox.Intersects(exitDoor.Hitbox))
             {
+                exitSound.Play(0.2f, 0f, 0f);
                 if (currentLevel < maxLevel)
                 {
                     currentLevel++;
@@ -262,9 +278,9 @@ namespace FinalProject.Managers
             switch (levelNumber)
             {
                 case 1:
-                {
-                    string[] present = new string[]
                     {
+                        string[] present = new string[]
+                        {
                         "0000000000000000000000000000000000000000",
                         "8{44}.................<{44}............8",
                         "8{44}.................<{44}............8",
@@ -295,9 +311,9 @@ namespace FinalProject.Managers
                         "8888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888"
-                    };
-                    string[] past = new string[]
-                    {
+                        };
+                        string[] past = new string[]
+                        {
                         "0000000000000000000000000000000000000000",
                         "85555..................5555............8",
                         "85555..................5555............8",
@@ -328,13 +344,13 @@ namespace FinalProject.Managers
                         "8888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888"
-                    };
-                    return (present, past);
-                }
+                        };
+                        return (present, past);
+                    }
                 case 2:
-                {
-                    string[] present = new string[]
                     {
+                        string[] present = new string[]
+                        {
                         "000000000000000000000000000000000000000000000000000000000000000000000000000",
                         "8.........................................................................8",
                         "8.........................................................................8",
@@ -375,9 +391,9 @@ namespace FinalProject.Managers
                         "888888888888888888888888888888888888888888888888888888888888888888888888888",
                         "888888888888888888888888888888888888888888888888888888888888888888888888888",
                         "888888888888888888888888888888888888888888888888888888888888888888888888888"
-                    };
-                    string[] past = new string[]
-                    {
+                        };
+                        string[] past = new string[]
+                        {
                         "000000000000000000000000000000000000000000000000000000000000000000000000000",
                         "8.........................................................................8",
                         "8.........................................................................8",
@@ -418,13 +434,13 @@ namespace FinalProject.Managers
                         "888888888888888888888888888888888888888888888888888888888888888888888888888",
                         "888888888888888888888888888888888888888888888888888888888888888888888888888",
                         "888888888888888888888888888888888888888888888888888888888888888888888888888"
-                    };
-                    return (present, past);
-                }
+                        };
+                        return (present, past);
+                    }
                 case 3:
-                {
-                    string[] present = new string[]
                     {
+                        string[] present = new string[]
+                        {
                         "0000000000000000000000000000000000000000000000000000000000000000000000000000",
                         "8{.......................}.................................................8",
                         "8{.......................}.................................................8",
@@ -470,9 +486,9 @@ namespace FinalProject.Managers
                         "8888888888888888888888888888888888888888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888888888888888888888888888888888888888"
-                    };
-                    string[] past = new string[]
-                    {
+                        };
+                        string[] past = new string[]
+                        {
                         "0000000000000000000000000000000000000000000000000000000000000000000000000000",
                         "85.......................5.................................................8",
                         "85.......................5.................................................8",
@@ -498,7 +514,7 @@ namespace FinalProject.Managers
                         "85....s......s.......v...5.................................................8",
                         "85....22222222222222222225.................................................8",
                         "85....55555555555555555555.................................................8",
-                        "85....s......s.............................................................8",
+                        "85....s......s...........................................................D.8",
                         "85........................................................222...........5558",
                         "822.......................................................555...........5558",
                         "855.......................................................555...........5558",
@@ -511,20 +527,20 @@ namespace FinalProject.Managers
                         "8.................................................555.....555...........5558",
                         "8.............................222.........222.....555.....555...........5558",
                         "8.............................555.........555.....555.....555...........5558",
-                        "8...DXXX...XXX...XXX......................555.....555.....555...........5558",
+                        "8....XXX...XXX...XXX......................555.....555.....555...........5558",
                         "8222222222222222222222222222222222222XXXXX555XXXXX555XXXXX555XXXXXXXXXXX5558",
                         "8555555555555555555555555555555555555555555555555555555555555555555555555558",
                         "8888888888888888888888888888888888888888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888888888888888888888888888888888888888"
-                    };
-                    return (present, past);
-                }
+                        };
+                        return (present, past);
+                    }
                 case 4:
-                {
-                    string[] present = new string[]
                     {
+                        string[] present = new string[]
+                        {
                         "0000000000000000000000000000000000000000000000000000000000000000000000000000",
                         "8{>...............................................a........................8",
                         "8{>...............................................a........................8",
@@ -542,12 +558,12 @@ namespace FinalProject.Managers
                         "8{...<{4444444444444444444444444444444444444444444444444444444444444444444}8",
                         "8{...<{444444444444}.............................}...................{4444}8",
                         "8{............................................B..}...................{4444}8",
-                        "8{...............................................}...D...............{4444}8",
+                        "8{..............................................4}...D...............{4444}8",
                         "8{............................................[11}[1111].............{4444}8",
                         "8[111]........................................{44}{4444}H.....H......{4444}8",
                         "8{444}........................................{44}{4444}.............{4444}8",
                         "8{............S..........S......V.............{44}{4444}.............{4444}8",
-                        "8{............[1111111111]....................{44}{4444}.............{4444}8",
+                        "8{............[1111111111]..................A.{44}{4444}.............{4444}8",
                         "8{............{4444444444}.................[1]{44}{4444}.............{4444}8",
                         "8{.............M...........................{4}{44}{4444}.............{4444}8",
                         "8{................................................{4444}.............{4444}8",
@@ -577,9 +593,9 @@ namespace FinalProject.Managers
                         "8888888888888888888888888888888888888888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888888888888888888888888888888888888888"
-                    };
-                    string[] past = new string[]
-                    {
+                        };
+                        string[] past = new string[]
+                        {
                         "0000000000000000000000000000000000000000000000000000000000000000000000000000",
                         "85>...............................................a........................8",
                         "85>...............................................a........................8",
@@ -632,9 +648,9 @@ namespace FinalProject.Managers
                         "8888888888888888888888888888888888888888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888888888888888888888888888888888888888",
                         "8888888888888888888888888888888888888888888888888888888888888888888888888888"
-                    };
-                    return (present, past);
-                }
+                        };
+                        return (present, past);
+                    }
                 default:
                     // ด่าน 2 กันเหนียว (สามารถแก้เพิ่มเองได้เลย)
                     return (new string[] { "00P0000D00" }, new string[] { ".........." });
@@ -766,7 +782,7 @@ namespace FinalProject.Managers
 
                         platforms.Add(movingPlat);
                     }
-                    else if (tile == 'P') player = new Player(new Vector2(x * tileSize, y * tileSize), playerAnimations);
+                    else if (tile == 'P') player = new Player(new Vector2(x * tileSize, y * tileSize), playerAnimations, jumpSound, deadSound);
                     else if (tile == 'B') boxes.Add(new Box(new Vector2(x * tileSize, y * tileSize), boxTexture));
                     else if (tile == 'E')
                     {
@@ -887,7 +903,6 @@ namespace FinalProject.Managers
             boxes.Clear();
             enemies.Clear();
             swingingHazards.Clear();
-            itemManager.hearts.Clear();
             hasExitDoor = false;
             exitDoor = null;
             plates.Clear();

@@ -1,5 +1,6 @@
 using FinalProject.Managers;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
@@ -13,11 +14,6 @@ public class Player
     public Rectangle Hitbox => new Rectangle((int)Position.X, (int)Position.Y, 32, 32);
 
     private float speed = 5f;
-    public int HP { get; set; } = 3;
-    public int MaxHP { get; } = 3;
-    public bool isInvincible = false;
-    private int invincibilityTimer = 0;
-    private int stunTimer = 0;
     private float gravity = 0.5f;
     private float jumpForce = -12f;
     private float wallJumpForce = 6f;
@@ -55,12 +51,14 @@ public class Player
     private PlayerState currentState = PlayerState.Idle;
     private Dictionary<PlayerState, Animation> animations;
     private Animation currentAnimation;
+    private SoundEffect jumpSound;
+    private SoundEffect deadSound;
 
     private int currentFrame = 0;
     private int frameDelay = 6;
     private int frameCounter = 0;
     private bool facingRight = true;
-    public Player(Vector2 startPos, Dictionary<PlayerState, Animation> anims)
+    public Player(Vector2 startPos, Dictionary<PlayerState, Animation> anims, SoundEffect jumpSfx, SoundEffect deadSfx)
     {
         Position = startPos;
         SpawnPoint = startPos;
@@ -68,39 +66,20 @@ public class Player
 
         animations = anims;
         currentAnimation = animations[PlayerState.Idle];
-    }
-
-    public void Heal(int amount)
-    {
-        HP += amount;
-        if (HP > MaxHP) HP = MaxHP;
+        jumpSound = jumpSfx;
+        deadSound = deadSfx;
     }
 
     public void TakeDamage(int knockDuration)
     {
-        if (isInvincible) return;
-
-        HP--;
-
-        if (HP <= 0)
-        {
-            Die();
-        }
-        else
-        {
-            isInvincible = true;
-            invincibilityTimer = 90;
-            stunTimer = 15;
-
-            Velocity.Y = -6f;
-            Velocity.X = knockDuration * 6f;
-        }
-
+        Die();
     }
 
     public void Die()
     {
+        if (IsDead) return;
         IsDead = true;
+        deadSound.Play(0.25f, 0f, 0f);
     }
 
     public void PushOutHorizontally(List<Platform> platforms)
@@ -141,18 +120,11 @@ public class Player
             // 1. จัดการ Timer (Dash, อมตะ, สตัน)
             // ==========================================
             if (dashCooldownTimer > 0) dashCooldownTimer--;
-            if (invincibilityTimer > 0)
-            {
-                invincibilityTimer--;
-                if (invincibilityTimer <= 0) isInvincible = false;
-            }
-            if (stunTimer > 0) stunTimer--;
-
 
             // ==========================================
             // 2. รับ Input แกน X และ Dash
             // ==========================================
-            if (InputManager.IsKeyPressed(Keys.LeftShift) && dashCooldownTimer <= 0 && stunTimer <= 0 && CanDash) // Add CanDash Later
+            if (InputManager.IsKeyPressed(Keys.LeftShift) && dashCooldownTimer <= 0 && CanDash) // Add CanDash Later
             {
                 isDashing = true;
                 dashTimer = dashDuration;
@@ -160,7 +132,7 @@ public class Player
                 dashDirection = facingRight ? 1f : -1f;
             }
 
-            if (stunTimer <= 0 && !isDashing)
+            if (!isDashing)
             {
                 if (wallJumpTimer > 0)
                 {
@@ -228,10 +200,13 @@ public class Player
             // 4. ลอจิกการกระโดด
             // ==========================================
             bool justPressedSpace = InputManager.IsKeyPressed(Keys.Space);
-            if (justPressedSpace && stunTimer <= 0 && !isDashing)
+            if (justPressedSpace && !isDashing)
             {
                 if (isGrounded)
+                {
                     Velocity.Y = jumpForce;
+                    jumpSound.Play(0.2f, 0f, 0f);
+                }
                 else if (isTouchingLeftWall && CanWallJump) // Can WallJump Later
                 {
                     Velocity.Y = jumpForce;
@@ -239,6 +214,7 @@ public class Player
                     forcedDirection = 1f;
                     Velocity.X = wallJumpForce;
                     isWallSliding = false;
+                    jumpSound.Play(0.2f, -0.2f, 0f);
                 }
                 else if (isTouchingRightWall && CanWallJump) // Can WallJump Later
                 {
@@ -247,11 +223,13 @@ public class Player
                     forcedDirection = -1f;
                     Velocity.X = -wallJumpForce;
                     isWallSliding = false;
+                    jumpSound.Play(0.2f, -0.2f, 0f);
                 }
                 else if (CanDoubleJump && !isGrounded && !isDoubleJump) // Add CanDoubleJump check here LATER
                 {
                     Velocity.Y = jumpForce;
                     isDoubleJump = true;
+                    jumpSound.Play(0.2f, 0.2f, 0f);
                 }
             }
 
@@ -292,7 +270,6 @@ public class Player
             PlayerState newState = PlayerState.Idle;
 
             if (IsDead) newState = PlayerState.Die;
-            else if (stunTimer > 0) newState = PlayerState.Hurt;
             else if (isDashing) newState = PlayerState.Running;
             else if (isWallSliding) newState = PlayerState.WallClinging;
             else if (!isGrounded)
@@ -416,10 +393,6 @@ public class Player
     public void Draw(SpriteBatch spriteBatch)
     {
         Color drawColor = Color.White;
-        if (isInvincible && (invincibilityTimer / 10) % 2 == 0)
-        {
-            drawColor = Color.Red * 0.5f;
-        }
 
         float scale = 1.5f;
         int drawWidth = (int)(currentAnimation.FrameWidth * scale);
