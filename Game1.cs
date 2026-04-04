@@ -46,7 +46,7 @@ public class Game1 : Game
     protected override void Update(GameTime gameTime)
     {
         KeyboardState currentKey = Keyboard.GetState();
-        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || currentKey.IsKeyDown(Keys.Escape))
+        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || currentKey.IsKeyDown(Keys.Escape) || gameManager.IsExiting)
             Exit();
 
         InputManager.Update();
