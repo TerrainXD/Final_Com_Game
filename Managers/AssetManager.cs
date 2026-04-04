@@ -7,24 +7,16 @@ namespace FinalProject.Managers
 {
     public static class AssetManager
     {
-        // ==========================================
-        // 1. Fonts & UI
-        // ==========================================
+        //Fonts & UI
         public static SpriteFont Font;
         public static Texture2D PlayButtonTex;
         public static Texture2D CloseButtonTex;
         public static Texture2D RestartButtonTex;
-
-        // ==========================================
-        // 2. Environment & Terrain
-        // ==========================================
         public static Texture2D TerrainTexture;
         public static Texture2D BgBrown;
         public static Texture2D BgGray;
 
-        // ==========================================
-        // 3. Hazards & Enemies
-        // ==========================================
+        // Hazards 
         public static Texture2D SpikesTexture;
         public static Texture2D SlimeTexture;
         public static Texture2D SpearTexture;
@@ -33,9 +25,7 @@ namespace FinalProject.Managers
         public static Texture2D SawTexture;
         public static Texture2D ChainTexture;
 
-        // ==========================================
-        // 4. Items & Objects
-        // ==========================================
+        // Items & Objects
         public static Texture2D DoubleJumpTexture;
         public static Texture2D DashTexture;
         public static Texture2D WallJumpTexture;
@@ -44,9 +34,7 @@ namespace FinalProject.Managers
         public static Texture2D PortalTexture;
         public static Texture2D MovingPlatformTexture;
 
-        // ==========================================
-        // 5. Audio (SFX & BGM)
-        // ==========================================
+        // Sound
         public static SoundEffect PickupSound;
         public static SoundEffect JumpSound;
         public static SoundEffect ShiftSound;
